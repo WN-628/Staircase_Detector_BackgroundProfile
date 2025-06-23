@@ -1,0 +1,1 @@
+FIXED_RESOLUTION_METER = 0.25 #change this value to modify vertical resolution in depth (meter)
