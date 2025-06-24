@@ -1,117 +1,126 @@
 import os
 import shutil
 import zipfile
-import warnings
 
 import numpy as np
-import netCDF4 as netcdf
 
 from data_preparation import load_data_csv_zip
 from create_netcdf import create_netcdf
-from staircase_detector import get_mixed_layers
 from config import FIXED_RESOLUTION_METER
-from after_detector import *
+from smooth_temp import smooth_background
 
 """
-Script to detect thermohaline staircases in Ice Tethered Profiler data.
-Each profile maintains its own true min→max depth grid without artificial zero-padding.
+Script to process CTD data: smooth temperature profiles and save to NetCDF.
+Expects:
+  - INPUT_DIR: directory with .zip files of CTD CSVs
+  - OUTPUT_DIR: empty or new directory for .nc outputs
 """
+
+# --- Configuration: input and output folders ---
+INPUT_DIR = 'gridData_zip'
+OUTPUT_DIR = 'prod_files'
+
+# Ensure input exists
+if not os.path.isdir(INPUT_DIR):
+    print(f"❌ Input directory '{INPUT_DIR}' does not exist.")
+    exit(1)
+
+# Clean or create output directory
+if os.path.isdir(OUTPUT_DIR):
+    shutil.rmtree(OUTPUT_DIR)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print('Ice tethered profiles')
-zip_files = [f for f in os.listdir() if f.endswith('.zip')]
 
-# Detection thresholds
-thres_ml_upper  = 0.002  # mixed layer gradient threshold
-thres_int_lower = 0.005  # interface gradient threshold
-ml_min_length   = 0.75   # mixed layer min depth length (m)
-int_min_temp    = 0.01   # interface min temperature width (°C)
-cl_length       = 1.0    # connecting layer max length (m)
-smooth_length   = 7      # smoothing window (grid points)
+# Find all zip files in the input directory
+zip_files = [f for f in os.listdir(INPUT_DIR) if f.endswith('.zip')]
+if not zip_files:
+    print(f"⚠️ No .zip files found in '{INPUT_DIR}'")
+    exit(0)
 
-for zip_name in zip_files:
-    base = os.path.splitext(zip_name)[0]
-    ncfile = f"{base}.nc"
-    print(f"📦 Processing {zip_name} → will save to {ncfile}")
+# Loop over zip files containing CTD CSVs
+for src_zip in zip_files:
+    zip_path = os.path.join(INPUT_DIR, src_zip)
+    tmp_dir = os.path.splitext(src_zip)[0]
 
-    # 1) Extract CSVs
-    tmp_dir = 'tmp'
+    # Prepare temporary extraction folder
     if os.path.exists(tmp_dir):
         shutil.rmtree(tmp_dir)
-    os.makedirs(tmp_dir)
-    with zipfile.ZipFile(zip_name, 'r') as z:
-        z.extractall(tmp_dir)
-    os.remove(zip_name)
+    os.makedirs(tmp_dir, exist_ok=True)
 
-    # 2) Gather profile files
+    # Unzip profiles
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        z.extractall(tmp_dir)
+
+    # Gather profile CSV files
     profiles = []
     for root, _, files in os.walk(tmp_dir):
         for f in files:
             if f.endswith('.csv') and not f.startswith('._'):
                 profiles.append(os.path.join(root, f))
-            # else:
-                # warnings.warn(f"File {f} is not a CSV file and will be ignored.")
 
-    # 3) Load raw profiles (no interpolation) using absolute paths
+    # Load raw profiles (no interpolation)
     prof_no, p_raw, lat, lon, ct_raw, sa_raw, dates = load_data_csv_zip(
-        '', profiles, interp=False,
+        '', profiles,
+        interp=False,
         resolution=FIXED_RESOLUTION_METER
     )
     N = len(prof_no)
     if N == 0:
-        print(f"No valid profiles in {zip_name}")
+        print(f"⚠️ No valid profiles in '{src_zip}'")
         shutil.rmtree(tmp_dir)
         continue
 
-    # 4) Determine the maximum true profile length
+    # Determine maximum profile length
     valid_mask = ~np.ma.getmaskarray(p_raw)
-    lengths = valid_mask.sum(axis=1)
-    max_len = int(np.max(lengths))
+    max_len = int(valid_mask.sum(axis=1).max())
 
-    # 5) Allocate per-profile grids preserving true min→max depths
+    # Allocate arrays
     p   = np.ma.masked_all((N, max_len))
     ct  = np.ma.masked_all((N, max_len))
     sa  = np.ma.masked_all((N, max_len))
 
-    # 6) Populate arrays
     for i in range(N):
-        valid = ~np.ma.getmaskarray(p_raw[i])
-        L = valid.sum()
-        p[i, :L]  = p_raw[i, valid]
-        ct[i, :L] = ct_raw[i, valid]
-        sa[i, :L] = sa_raw[i, valid]
+        vm = valid_mask[i]
+        L = vm.sum()
+        p[i, :L]  = p_raw[i, vm]
+        ct[i, :L] = ct_raw[i, vm]
+        sa[i, :L] = sa_raw[i, vm]
 
     # Clean up temporary files
     shutil.rmtree(tmp_dir)
 
-    # 7) Create NetCDF with nlevels = max_len
-    fh = create_netcdf(ncfile, max_len)
+    # Smooth background temperature profiles
+    ct_bg, ct_anom, background_only = smooth_background(ct, FIXED_RESOLUTION_METER)
 
-    # 8) Run detection on the per-profile grids
-    masks, depth_min_T, depth_max_T = get_mixed_layers(
-        np.ma.copy(p), np.ma.copy(ct),
-        thres_ml_upper, thres_int_lower,
-        ml_min_length, int_min_temp,
-        cl_length, smooth_length
-    )
+    # Define output NetCDF path
+    out_ncfile = os.path.join(OUTPUT_DIR, os.path.splitext(src_zip)[0] + '.nc')
 
-    # 9) Write to NetCDF
-    t0, t1 = 0, N
-    fh.variables['lat'][t0:t1]          = lat
-    fh.variables['lon'][t0:t1]          = lon
-    fh.variables['prof'][t0:t1]         = np.arange(N, dtype=np.int32)
-    fh.variables['dates'][t0:t1]        = dates
-    fh.variables['FloatID'][t0:t1]      = prof_no
+    # Create NetCDF and write results
+    fh = create_netcdf(out_ncfile, _nlevels_unused=None)
 
-    fh.variables['pressure'][t0:t1, :]  = p.filled(np.nan)
-    fh.variables['ct'][t0:t1, :]        = ct.filled(np.nan)
-    fh.variables['sa'][t0:t1, :]        = sa.filled(np.nan)
+    # Metadata
+    fh.variables['lat'][:]      = lat
+    fh.variables['lon'][:]      = lon
+    fh.variables['dates'][:]    = dates
+    fh.variables['FloatID'][:]  = prof_no
 
-    fh.variables['mask_ml'][t0:t1, :]   = masks.ml
-    fh.variables['mask_int'][t0:t1, :]  = masks.int
-    fh.variables['mask_cl'][t0:t1, :]   = masks.cl
-    fh.variables['mask_sc'][t0:t1, :]   = masks.sc
+    # Profile data variables
+    p_var       = fh.variables['pressure']
+    ct_var      = fh.variables['ct']
+    sa_var      = fh.variables['sa']
+    ct_bg_var   = fh.variables['ct_bg']
+    ct_anom_var = fh.variables['ct_anom']
+    bg_only_var = fh.variables['ct_bg_only']
 
-    fh.variables['depth_max_T'][t0:t1]  = depth_max_T
-    fh.variables['depth_min_T'][t0:t1]  = depth_min_T
+    for i in range(N):
+        vm = valid_mask[i]
+        p_var[i]       = p[i, vm].data.astype(np.float32)
+        ct_var[i]      = ct[i, vm].data
+        sa_var[i]      = sa[i, vm].data
+        ct_bg_var[i]   = ct_bg[i, vm].data
+        ct_anom_var[i] = ct_anom[i, vm].data
+        bg_only_var[i] = background_only[i, vm].data
 
     fh.close()
+    print(f"✅ Written smoothed data to '{out_ncfile}'")

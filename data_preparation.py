@@ -5,80 +5,10 @@ import os
 import re 
 from datetime import datetime
 
-import h5py #only used for .mat files
-
 from config import FIXED_RESOLUTION_METER
 
 # List to record files skipped due to depth threshold
 SKIPPED_DEPTH_FILES = []
-
-def load_data_mat_zip(path, profiles, interp=True, resolution=FIXED_RESOLUTION_METER):
-    valid_profiles = []
-    target_levels = np.arange(0, 2000, resolution)
-    # print("Files in tmp/:", profiles)
-
-    for fname in profiles:
-        if not fname.endswith(".mat"):
-            continue
-        try:
-            with h5py.File(os.path.join(path, fname), 'r') as f:
-                pressure = f['pr_filt'][:].flatten()
-                temperature = f['te_cor'][:].flatten()
-                salinity = f['sa_cor'][:].flatten()
-                lat = float(f['latitude'][0][0])
-                lon = float(f['longitude'][0][0])
-        except Exception as e:
-            # print(f"Skipping {fname}: {e}")
-            continue
-
-        # print(f"{fname}: pressure min = {pressure.min()}, max = {pressure.max()}, steps = {np.mean(np.diff(pressure))}")
-
-        if pressure.min() > 0 and pressure.max() > 500:
-            p_interp = target_levels
-            try:
-                temp_interp = np.interp(p_interp, pressure, temperature)
-                salt_interp = np.interp(p_interp, pressure, salinity)
-            except Exception as e:
-                # print(f"Interpolation failed for {fname}: {e}")
-                continue
-
-            sa = gsw.SA_from_SP(salt_interp, p_interp, lon, lat)
-            ct = gsw.CT_from_t(sa, temp_interp, p_interp)
-
-            profile = {
-                "p": p_interp,
-                "ct": ct,
-                "sa": sa,
-                "lat": lat,
-                "lon": lon,
-                "juld": 0,  # default value (not found in .mat)
-                "prof_no": int(fname[-8:-4]) if fname[-8:-4].isdigit() else 0
-            }
-            valid_profiles.append(profile)
-
-    N = len(valid_profiles)
-    array_shape = (N, len(target_levels))
-
-    p = np.ma.masked_all(array_shape)
-    ct = np.ma.masked_all(array_shape)
-    sa = np.ma.masked_all(array_shape)
-    lat = np.ma.masked_all(N)
-    lon = np.ma.masked_all(N)
-    juld = np.ma.masked_all(N)
-    prof_no = np.zeros(N, dtype=int)
-
-    for i, prof in enumerate(valid_profiles):
-        p[i, :] = prof['p']
-        ct[i, :] = prof['ct']
-        sa[i, :] = prof['sa']
-        lat[i] = prof['lat']
-        lon[i] = prof['lon']
-        juld[i] = prof['juld']
-        prof_no[i] = prof['prof_no']
-        
-    # print(f"✅ Loaded {len(valid_profiles)} valid profile(s): {[p['prof_no'] for p in valid_profiles]}")
-
-    return prof_no, p, lat, lon, ct, sa, juld
 
 def load_data_csv_zip(path, profiles, interp=True, resolution=FIXED_RESOLUTION_METER):
     valid_profiles = []

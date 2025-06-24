@@ -1,156 +1,82 @@
 import netCDF4 as netcdf
 import numpy as np
-import time
 
 from config import FIXED_RESOLUTION_METER
 
-def create_netcdf(filename,nlevels):
-  
-  fh = netcdf.Dataset(filename, 'w', format='NETCDF4')
-  fh.createDimension('Nobs', None)
-  fh.createDimension('nlevels', nlevels)
+def create_netcdf(filename, _nlevels_unused=None):
+    """
+    Create a NetCDF4 file with variable-length (vlen) arrays for profiles and masks.
+    Masks are stored as int8 (0/1) since boolean vlen is unsupported.
+    Adds background temperature fields: smoothed background, anomaly, and masked background.
+    """
+    fh = netcdf.Dataset(filename, 'w', format='NETCDF4')
 
-  # 2D pressure per profile
-  p_var = fh.createVariable('pressure',     'f4', ('Nobs','nlevels'),
-                            fill_value=np.nan, zlib=True)
-  p_var.long_name     = 'pressure'
-  p_var.standard_name = 'pressure'
-  p_var.units         = 'meter'
+    # Unlimited profile dimension
+    fh.createDimension('Nobs', None)
 
-  # 2D CT, SA, masks on same axis
-  ct_var = fh.createVariable('ct',    'f4', ('Nobs','nlevels'),
-                            fill_value=np.nan, zlib=True)
-  sa_var = fh.createVariable('sa',    'f4', ('Nobs','nlevels'), fill_value=np.nan, zlib=True)
-  
-  for name in ('mask_ml','mask_int','mask_cl','mask_sc'):
-      mv = fh.createVariable(name, 'i1', ('Nobs','nlevels'),
-                              fill_value=0, zlib=True)
-      mv.long_name = name
+    # Define vlen types
+    vl32   = fh.createVLType(np.float32, 'vl_float32')
+    vl64   = fh.createVLType(np.float64, 'vl_float64')
+    vlint8 = fh.createVLType(np.int8,    'vl_int8')
 
-  # 1D profile metadata
-  x2 = fh.createVariable('prof',np.int32, ('Nobs'),fill_value=0,zlib=True)
-  x2.long_name     = 'Profile number of float'
-  x2.standard_name = 'prof'
-  
-  x2 = fh.createVariable('FloatID',np.int32, ('Nobs'),fill_value=0,zlib=True)
-  x2.long_name     = 'Float ID'
-  x2.standard_name = 'FloatID'
-  
-  x2 = fh.createVariable('dates','f8',('Nobs',),fill_value=0,zlib=True)
-  x2.long_name     = 'Profile date'
-  x2.standard_name = 'dates'
-  x2.units         = 'seconds since 1970-01-01T00:00:00Z'
-  x2.calendar      = 'gregorian'
-  
-  x2 = fh.createVariable('lon','f4',('Nobs',),fill_value=0,zlib=True)
-  x2.long_name     = 'Longitude of float'
-  x2.standard_name = 'lon'
-  x2.units         = 'degrees'
-  
-  x2 = fh.createVariable('lat','f4',('Nobs',),fill_value=0,zlib=True)
-  x2.long_name     = 'Latitude of float'
-  x2.standard_name = 'lat'
-  x2.units         = 'degrees'
-  
-  # min and max temperature
-  x2 = fh.createVariable('depth_max_T', np.float32, ('Nobs',), fill_value=np.nan)
-  x2.long_name = 'Depth of maximum temperature'
-  x2.standard_name = 'max_depth_T'
-  x2.units         = 'degrees Celsius'
+    # Profile metadata
+    lat_var     = fh.createVariable('lat',    np.float64, ('Nobs',))
+    lat_var.long_name = 'Latitude'
+    lon_var     = fh.createVariable('lon',    np.float64, ('Nobs',))
+    lon_var.long_name = 'Longitude'
+    dates_var   = fh.createVariable('dates',  np.int32,   ('Nobs',))
+    dates_var.long_name = 'Profile date as YYYYMMDD'
+    prof_id     = fh.createVariable('FloatID', np.int32,  ('Nobs',))
+    prof_id.long_name = 'Profile identifier number'
 
-  x2 = fh.createVariable('depth_min_T', np.float32, ('Nobs',), fill_value=np.nan)
-  x2.long_name = 'Depth of minimum temperature'
-  x2.standard_name = 'min_depth_T'
-  x2.units         = 'degrees Celsius'
-  
-  return fh
-  
-  # --- Dimensions ---
-  
-  fh2 = netcdf.Dataset(filename,'w',format='NETCDF4')
-  fh2.createDimension('Nobs',None)
-  x1 = fh2.createVariable('n', np.int32, ('Nobs'))
-  x1.long_name     = 'Profile'
-  x1.standard_name = 'no'
-  
-  fh2.createDimension('pressure', len(pressure_levels))
-  x1 = fh2.createVariable('pressure', 'f4', ('pressure'))
-  x1.long_name     = 'Pressure'
-  x1.standard_name = 'depth'
-  x1.units         = 'meter'
-  x1[:]            = pressure_levels
-  
-  # --- Variables ---
-  
-  x2 = fh2.createVariable('prof',np.int32, ('Nobs'),fill_value=0,zlib=True)
-  x2.long_name     = 'Profile number of float'
-  x2.standard_name = 'prof'
-  
-  x2 = fh2.createVariable('FloatID',np.int32, ('Nobs'),fill_value=0,zlib=True)
-  x2.long_name     = 'Float ID'
-  x2.standard_name = 'FloatID'
-  
-  x2 = fh2.createVariable('dates','f8',('Nobs',),fill_value=0,zlib=True)
-  x2.long_name     = 'Profile date'
-  x2.standard_name = 'dates'
-  x2.units         = 'seconds since 1970-01-01T00:00:00Z'
-  x2.calendar      = 'gregorian'
-  
-  x2 = fh2.createVariable('lon','f4',('Nobs',),fill_value=0,zlib=True)
-  x2.long_name     = 'Longitude of float'
-  x2.standard_name = 'lon'
-  x2.units         = 'degrees'
-  
-  x2 = fh2.createVariable('lat','f4',('Nobs',),fill_value=0,zlib=True)
-  x2.long_name     = 'Latitude of float'
-  x2.standard_name = 'lat'
-  x2.units         = 'degrees'
-  
-  # min and max temperature
-  x2 = fh2.createVariable('depth_max_T', np.float32, ('Nobs',), fill_value=np.nan)
-  x2.long_name = 'Depth of maximum temperature'
-  x2.standard_name = 'max_depth_T'
-  x2.units         = 'degrees Celsius'
+    depth_max_T_var = fh.createVariable('depth_max_T', np.float32, ('Nobs',))
+    depth_max_T_var.long_name = 'Depth at max temperature'
+    depth_min_T_var = fh.createVariable('depth_min_T', np.float32, ('Nobs',))
+    depth_min_T_var.long_name = 'Depth at min temperature'
 
-  x2 = fh2.createVariable('depth_min_T', np.float32, ('Nobs',), fill_value=np.nan)
-  x2.long_name = 'Depth of minimum temperature'
-  x2.standard_name = 'min_depth_T'
-  x2.units         = 'degrees Celsius'
+    # Profile data
+    p_var  = fh.createVariable('pressure', vl32,  ('Nobs',))
+    p_var.long_name = 'Pressure profile'
+    p_var.units     = 'dbar'
 
-  # other variables
-  x2 = fh2.createVariable('ct','f8',('Nobs','pressure'),fill_value=np.nan,zlib=True)
-  x2.long_name     = 'Conservative Temperature'
-  x2.standard_name = 'ct'
-  x2.units         = 'degrees Celsius'
+    ct_var = fh.createVariable('ct', vl64,   ('Nobs',))
+    ct_var.long_name = 'Conservative Temperature profile'
+    ct_var.units     = 'degC'
 
-  x2 = fh2.createVariable('sa','f8',('Nobs','pressure'),fill_value=np.nan,zlib=True)
-  x2.long_name     = 'Absolute Salinity'
-  x2.standard_name = 'sa'
-  x2.units         = 'g/kg'
+    sa_var = fh.createVariable('sa', vl64,   ('Nobs',))
+    sa_var.long_name = 'Absolute Salinity profile'
+    sa_var.units     = 'g/kg'
 
-  # masks variables
-  x2 = fh2.createVariable('mask_int',np.int32,('Nobs','pressure'),fill_value=0,zlib=True)
-  x2.long_name     = 'mask with sequences of interfaces'
-  x2.standard_name = 'mask_int'
-  x2.units         = ' '
+    # New background temperature fields
+    ct_bg_var = fh.createVariable('ct_bg', vl64, ('Nobs',))
+    ct_bg_var.long_name = 'Background smoothed Conservative Temperature'
+    ct_bg_var.units     = 'degC'
 
-  x2 = fh2.createVariable('mask_ml',np.int32,('Nobs','pressure'),fill_value=0,zlib=True)
-  x2.long_name     = 'mask with sequences of mixed layers'
-  x2.standard_name = 'mask_ml'
-  x2.units         = ' '
-  
-  x2 = fh2.createVariable('mask_cl',np.int32,('Nobs','pressure'),fill_value=0,zlib=True)
-  x2.long_name     = 'mask with sequences of connecting layers'
-  x2.standard_name = 'mask_cl'
-  x2.units         = ' '
-  
-  x2 = fh2.createVariable('mask_sc',np.int32,('Nobs','pressure'),fill_value=0,zlib=True)
-  x2.long_name     = 'mask with sequences of staircase structure'
-  x2.standard_name = 'mask_sc'
-  x2.units         = ' '
-  
-  
-  
-  
-  
-  fh2.close()
+    ct_anom_var = fh.createVariable('ct_anom', vl64, ('Nobs',))
+    ct_anom_var.long_name = 'Temperature anomaly (ct - ct_bg)'
+    ct_anom_var.units     = 'degC'
+
+    bg_only_var = fh.createVariable('ct_bg_only', vl64, ('Nobs',))
+    bg_only_var.long_name = 'Background-only profile masked where anomalies exceed threshold'
+    bg_only_var.units     = 'degC'
+
+    # Variable-length mask arrays (0/1 int8)
+    ml_var = fh.createVariable('mask_ml',    vlint8, ('Nobs',))
+    ml_var.long_name = 'Mixed-layer mask (1 where in mixed layer)'
+
+    int_var = fh.createVariable('mask_int',  vlint8, ('Nobs',))
+    int_var.long_name = 'Interface mask (1 at interface)'
+
+    cl_var = fh.createVariable('mask_cl',   vlint8, ('Nobs',))
+    cl_var.long_name = 'Connecting-layer mask (1 in connecting layers)'
+
+    sc_var = fh.createVariable('mask_sc',   vlint8, ('Nobs',))
+    sc_var.long_name = 'Staircase mask (1 in staircase)'
+    
+    cl_mushy_var = fh.createVariable('cl_mushy',     vlint8, ('Nobs',))
+    cl_mushy_var.long_name = 'Mushy-layer indicator'
+
+    cl_supermushy_var = fh.createVariable('cl_supermushy', vlint8, ('Nobs',))
+    cl_supermushy_var.long_name = 'Supermushy-layer indicator'
+
+    return fh
