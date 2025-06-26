@@ -8,6 +8,7 @@ from data_preparation import load_data_csv_zip
 from create_netcdf import create_netcdf
 from config import FIXED_RESOLUTION_METER
 from smooth_temp import smooth_background
+from sc_detector_grad import detect_staircase_gradient_ratio
 
 """
 Script to process CTD data: smooth temperature profiles and save to NetCDF.
@@ -91,7 +92,7 @@ for src_zip in zip_files:
     shutil.rmtree(tmp_dir)
 
     # Smooth background temperature profiles
-    ct_bg, ct_anom, background_only = smooth_background(ct, FIXED_RESOLUTION_METER)
+    mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only = detect_staircase_gradient_ratio(p, ct, FIXED_RESOLUTION_METER)
 
     # Define output NetCDF path
     out_ncfile = os.path.join(OUTPUT_DIR, os.path.splitext(src_zip)[0] + '.nc')
@@ -112,6 +113,9 @@ for src_zip in zip_files:
     ct_bg_var   = fh.variables['ct_bg']
     ct_anom_var = fh.variables['ct_anom']
     bg_only_var = fh.variables['ct_bg_only']
+    ml_var      = fh.variables['mask_ml']
+    int_var     = fh.variables['mask_int']
+    sc_var      = fh.variables['mask_sc']
 
     for i in range(N):
         vm = valid_mask[i]
@@ -121,6 +125,9 @@ for src_zip in zip_files:
         ct_bg_var[i]   = ct_bg[i, vm].data
         ct_anom_var[i] = ct_anom[i, vm].data
         bg_only_var[i] = background_only[i, vm].data
+        ml_var[i]      = mask_ml[i, vm]
+        int_var[i]     = mask_int[i, vm]
+        sc_var[i]      = mask_sc[i, vm]
 
     fh.close()
-    print(f"✅ Written smoothed data to '{out_ncfile}'")
+    print(f"✅ Written staircase data to '{out_ncfile}'")
