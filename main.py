@@ -7,7 +7,6 @@ import numpy as np
 from data_preparation import load_data_csv_zip
 from create_netcdf import create_netcdf
 from config import FIXED_RESOLUTION_METER
-from smooth_temp import smooth_background
 from sc_detector_grad import detect_staircase_gradient_ratio
 
 """
@@ -92,7 +91,7 @@ for src_zip in zip_files:
     shutil.rmtree(tmp_dir)
 
     # Smooth background temperature profiles
-    mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only = detect_staircase_gradient_ratio(p, ct, FIXED_RESOLUTION_METER)
+    mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only, max_p, min_p = detect_staircase_gradient_ratio(p, ct, FIXED_RESOLUTION_METER)
 
     # Define output NetCDF path
     out_ncfile = os.path.join(OUTPUT_DIR, os.path.splitext(src_zip)[0] + '.nc')
@@ -116,6 +115,8 @@ for src_zip in zip_files:
     ml_var      = fh.variables['mask_ml']
     int_var     = fh.variables['mask_int']
     sc_var      = fh.variables['mask_sc']
+    depth_max_T = fh.variables['depth_max_T']
+    depth_min_T = fh.variables['depth_min_T']
 
     for i in range(N):
         vm = valid_mask[i]
@@ -128,6 +129,9 @@ for src_zip in zip_files:
         ml_var[i]      = mask_ml[i, vm]
         int_var[i]     = mask_int[i, vm]
         sc_var[i]      = mask_sc[i, vm]
+        depth_max_T[i] = max_p[i] 
+        depth_min_T[i] = min_p[i]
+
 
     fh.close()
     print(f"✅ Written staircase data to '{out_ncfile}'")

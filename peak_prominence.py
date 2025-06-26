@@ -53,62 +53,62 @@ def find_step_peaks(ct_anom, min_prominence=0.0027, mode='prom'):
             raise ValueError("mode must be 'zero' or 'prom'")
     return peaks_mask
 
-# # === Example usage ===
-# # Load CT profile #1
-# ds = xr.open_dataset('prod_files/itp65cormat.nc')
-# float_ids = ds.FloatID.values
-# idxs = np.where(float_ids == 1)[0]
-# if idxs.size == 0:
-#     raise RuntimeError("FloatID 1 not found.")
-# idx = int(idxs[0])
-# dim0 = list(ds.dims)[0]
-# ds1 = ds.isel({dim0: idx})
+# === Example usage ===
+# Load CT profile #1
+ds = xr.open_dataset('prod_files/itp65cormat.nc')
+float_ids = ds.FloatID.values
+idxs = np.where(float_ids == 1)[0]
+if idxs.size == 0:
+    raise RuntimeError("FloatID 1 not found.")
+idx = int(idxs[0])
+dim0 = list(ds.dims)[0]
+ds1 = ds.isel({dim0: idx})
 
-# # Extract CT anomaly, CT and pressure
-# temp_anom = np.asarray(ds1.ct_anom.values, dtype=float)
-# ct = np.asarray(ds1.ct.values, dtype=float)
-# pressure = np.asarray(ds1.pressure.values, dtype=float)
-# ct_bg = np.asarray(
-#     ds1.ct_bg.values if 'ct_bg' in ds1 else ds1.ct_bg_only.values,
-#     dtype=float
-# )
+# Extract CT anomaly, CT and pressure
+temp_anom = np.asarray(ds1.ct_anom.values, dtype=float)
+ct = np.asarray(ds1.ct.values, dtype=float)
+pressure = np.asarray(ds1.pressure.values, dtype=float)
+ct_bg = np.asarray(
+    ds1.ct_bg.values if 'ct_bg' in ds1 else ds1.ct_bg_only.values,
+    dtype=float
+)
 
-# # Detect peaks using both methods
-# gmin = 0.0027  # example threshold
-# mask_zero = find_step_peaks(temp_anom, min_prominence=gmin, mode='zero')
-# mask_prom = find_step_peaks(temp_anom, min_prominence=gmin, mode='prom')
+# Detect peaks using both methods
+gmin = 0.00027  # example threshold
+mask_zero = find_step_peaks(temp_anom, min_prominence=gmin, mode='zero')
+mask_prom = find_step_peaks(temp_anom, min_prominence=gmin, mode='prom')
 
-# # Plot both sets of peaks in one figure
-# grid = plt.figure(figsize=(12, 7))
-# ax0 = grid.add_subplot(121)
-# ax1 = grid.add_subplot(122, sharey=ax0)
+# Plot both sets of peaks in one figure
+grid = plt.figure(figsize=(12, 7))
+ax0 = grid.add_subplot(121)
+ax1 = grid.add_subplot(122, sharey=ax0)
 
-# # Left: Original vs Background CT with both peak sets
-# ax0.plot(ct,    pressure,    label='Original CT')
-# ax0.plot(ct_bg, pressure,    label='Background CT')
-# ax0.scatter(ct[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
-# ax0.scatter(ct[mask_prom], pressure[mask_prom], marker='o', color='red', label='Prom method')
-# ax0.invert_yaxis()
-# ax0.set_xlabel('Conservative Temperature (°C)')
-# ax0.set_ylabel('Pressure (dbar)')
-# ax0.set_title('CT vs Background CT')
-# ax0.grid(True)
-# ax0.legend()
+# Left: Original vs Background CT with both peak sets
+ax0.plot(ct,    pressure,    label='Original CT')
+ax0.plot(ct_bg, pressure,    label='Background CT')
+ax0.scatter(ct[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
+ax0.scatter(ct[mask_prom], pressure[mask_prom], marker='o', color='red', label='Prom method')
+ax0.invert_yaxis()
+ax0.set_xlabel('Conservative Temperature (°C)')
+ax0.set_ylabel('Pressure (dbar)')
+ax0.set_title('CT vs Background CT')
+ax0.grid(True)
+ax0.legend()
 
-# # Right: CT Anomaly with both peak sets
-# ax1.plot(temp_anom, pressure, label='CT Anomaly')
-# ax1.axvline(0, color='gray')
-# ax1.scatter(temp_anom[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
-# ax1.scatter(temp_anom[mask_prom], pressure[mask_prom], marker='o', color='red', label='Prom method')
-# for i in np.where(mask_zero)[0]:
-#     ax1.text(temp_anom[i], pressure[i], f'{temp_anom[i]:+.3f}', va='center', fontsize=7, color='blue')
-# for i in np.where(mask_prom)[0]:
-#     ax1.text(temp_anom[i], pressure[i], f'{temp_anom[i]:+.3f}', va='bottom', fontsize=7, color='red')
-# # ax1.invert_yaxis()
-# ax1.set_xlabel('CT Anomaly (°C)')
-# ax1.set_title('CT Anomaly with Detected Peaks')
-# ax1.grid(True)
-# ax1.legend()
+# Right: CT Anomaly with both peak sets
+ax1.plot(temp_anom, pressure, label='CT Anomaly')
+ax1.axvline(0, color='gray')
+ax1.scatter(temp_anom[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
+ax1.scatter(temp_anom[mask_prom], pressure[mask_prom], marker='o', color='red', label='Prom method')
+for i in np.where(mask_zero)[0]:
+    ax1.text(temp_anom[i], pressure[i], f'{temp_anom[i]:+.3f}', va='center', fontsize=7, color='blue')
+for i in np.where(mask_prom)[0]:
+    ax1.text(temp_anom[i], pressure[i], f'{temp_anom[i]:+.3f}', va='bottom', fontsize=7, color='red')
+# ax1.invert_yaxis()
+ax1.set_xlabel('CT Anomaly (°C)')
+ax1.set_title('CT Anomaly with Detected Peaks')
+ax1.grid(True)
+ax1.legend()
 
-# plt.tight_layout()
-# plt.show()
+plt.tight_layout()
+plt.show()

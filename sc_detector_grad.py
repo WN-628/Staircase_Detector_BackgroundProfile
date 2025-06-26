@@ -5,12 +5,12 @@ def detect_staircase_gradient_ratio(
     p2d,
     ct2d,
     dz,
-    Theta=6.0,
+    Theta=30.0,
     theta_anom=0.04,
-    thr_iface=1.9,
+    thr_iface=1.8,
     thr_ml=0.4,
     min_layers=3,
-    max_sep=15.0,
+    max_sep=2.0,
 ):
     """
     (…docstring unchanged…)
@@ -21,6 +21,32 @@ def detect_staircase_gradient_ratio(
     ct_bg2d, ct_anom2d, background_only = smooth_background(
         ct2d, dz, Theta=Theta, theta=theta_anom
     )
+    
+    # 1a) Initialize result arrays
+    max_ct_bg = np.full(N, np.nan)
+    max_p = np.full(N, np.nan)
+    min_ct_bg = np.full(N, np.nan)
+    min_p = np.full(N, np.nan)
+
+    # Compute per-profile maxima and first minima above the max
+    bg_filled = ct_bg2d.filled(np.nan)
+    for i in range(N):
+        profile = bg_filled[i]
+        if np.all(np.isnan(profile)):
+            continue
+        # Maximum background temperature and its first index
+        max_idx = np.nanargmax(profile)
+        max_ct_bg[i] = profile[max_idx]
+        max_p[i] = p2d[i, max_idx]
+
+        # Search upward (shallower) for first local minimum
+        for j in range(max_idx - 1, 0, -1):
+            if np.isnan(profile[j-1]) or np.isnan(profile[j]) or np.isnan(profile[j+1]):
+                continue
+            if profile[j] < profile[j - 1] and profile[j] < profile[j + 1]:
+                min_ct_bg[i] = profile[j]
+                min_p[i] = p2d[i, j]
+                break
 
     # 2) Compute gradients per profile
     grad_raw = np.full((N, L), np.nan)
@@ -85,5 +111,9 @@ def detect_staircase_gradient_ratio(
             start, end = grp[0], grp[-1]
             segments[i].append((start, end))
             mask_stair[i, start:end+1] = True
+    
+    # 6) Zero out any int/ml points not in a staircase
+    mask_int = mask_int & mask_stair
+    mask_ml  = mask_ml  & mask_stair
 
-    return mask_int, mask_ml, mask_stair, segments, ratio2d, ct_bg2d, ct_anom2d, background_only
+    return mask_int, mask_ml, mask_stair, segments, ratio2d, ct_bg2d, ct_anom2d, background_only, max_p, min_p
