@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # USER CONFIG ─────────────────────────────────────────
 nc_path   = 'prod_files/itp65cormat.nc'
-target_id = 1  # change to your FloatID
+target_id = 332  # change to your FloatID
 
 # 1) Open the file and find the profile index
 ds        = Dataset(nc_path, 'r')
@@ -16,8 +16,8 @@ prof      = int(inds[0])
 
 # # 2) Read masks
 # dmask_sc  = ds.variables['mask_sc'][:]  # staircase mask
-# mask_int = ds.variables['mask_int'][:] # interface mask
-# mask_ml  = ds.variables['mask_ml'][:] # mixed-layer mask
+# mask_int = ds.variables['mask_int'][:]  # interface mask
+# mask_ml  = ds.variables['mask_ml'][:]   # mixed-layer mask
 
 # Helper to grab variables for this profile
 def grab(varname):
