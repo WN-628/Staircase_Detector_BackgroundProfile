@@ -1,5 +1,5 @@
 import numpy as np
-from smooth_temp import smooth_background
+from smooth_temp import smooth_background_fixed
 
 # def detect_staircase_gradient_ratio(
 #     p2d,
@@ -138,7 +138,7 @@ def detect_staircase_gradient_ratio(
     N, L = p2d.shape
 
     # 1) Smooth background and anomalies
-    ct_bg2d, ct_anom2d, background_only = smooth_background(
+    ct_bg2d, ct_anom2d, background_only = smooth_background_fixed(
         ct2d, dz, Theta=Theta, theta=theta_anom
     )
 

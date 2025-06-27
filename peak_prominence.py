@@ -57,7 +57,7 @@ def find_step_peaks(ct_anom, min_prominence=0.0027, mode='prom'):
 # Load CT profile #1
 ds = xr.open_dataset('prod_files/itp65cormat.nc')
 float_ids = ds.FloatID.values
-idxs = np.where(float_ids == 1)[0]
+idxs = np.where(float_ids == 6)[0]
 if idxs.size == 0:
     raise RuntimeError("FloatID 1 not found.")
 idx = int(idxs[0])
@@ -74,7 +74,7 @@ ct_bg = np.asarray(
 )
 
 # Detect peaks using both methods
-gmin = 0.00027  # example threshold
+gmin = 0.005  # example threshold
 mask_zero = find_step_peaks(temp_anom, min_prominence=gmin, mode='zero')
 mask_prom = find_step_peaks(temp_anom, min_prominence=gmin, mode='prom')
 

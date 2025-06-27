@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # USER CONFIG ─────────────────────────────────────────
 nc_path   = 'prod_files/itp65cormat.nc'
-target_id = 332  # change to your FloatID
+target_id = 13  # change to your FloatID
 
 # 1) Open the file and find the profile index
 ds        = Dataset(nc_path, 'r')
@@ -30,9 +30,9 @@ def grab(varname):
 pressure  = grab('pressure')
 ct        = grab('ct')
 ct_bg     = grab('ct_bg')
-mask_sc   = grab('mask_sc').astype(bool)
-mask_int  = grab('mask_int').astype(bool)
-mask_ml   = grab('mask_ml').astype(bool)
+# mask_sc   = grab('mask_sc').astype(bool)
+# mask_int  = grab('mask_int').astype(bool)
+# mask_ml   = grab('mask_ml').astype(bool)
 # New: read depths of max and min temperature
 depth_max_T   = grab('depth_max_T')
 depth_min_T   = grab('depth_min_T')
@@ -42,23 +42,23 @@ plt.figure(figsize=(6, 8))
 plt.plot(ct, pressure, '-', label='CT profile', linewidth=1.5)
 plt.plot(ct_bg, pressure, '--', label='Smoothed CT profile', color='black')
 
-# interface points
-if mask_int.any():
-    plt.scatter(ct[mask_int], pressure[mask_int],
-                marker='o', s=30,
-                label='Interface points', color='orange')
+# # interface points
+# if mask_int.any():
+#     plt.scatter(ct[mask_int], pressure[mask_int],
+#                 marker='o', s=30,
+#                 label='Interface points', color='orange')
 
-# mixed-layer points
-if mask_ml.any():
-    plt.scatter(ct[mask_ml], pressure[mask_ml],
-                marker='s', s=30,
-                label='Mixed-layer points', color='green')
+# # mixed-layer points
+# if mask_ml.any():
+#     plt.scatter(ct[mask_ml], pressure[mask_ml],
+#                 marker='s', s=30,
+#                 label='Mixed-layer points', color='green')
 
-# optional: highlight full staircase region
-if mask_sc.any():
-    plt.scatter(ct[mask_sc], pressure[mask_sc],
-                marker='o', s=10, alpha=0.3,
-                label='Staircase region', color='red')
+# # optional: highlight full staircase region
+# if mask_sc.any():
+#     plt.scatter(ct[mask_sc], pressure[mask_sc],
+#                 marker='o', s=10, alpha=0.3,
+#                 label='Staircase region', color='red')
     
 # Plot horizontal lines for depth_max_T and depth_min_T
 plt.axhline(depth_max_T, color='green', linestyle='--', label='Depth at max T')
