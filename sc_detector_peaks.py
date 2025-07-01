@@ -1,142 +1,189 @@
 import numpy as np
-from smooth_temp import smooth_background
+from smooth_temp import smooth_background_by_depth
 from peak_prominence import find_step_peaks
 
-def detect_staircase_peaks_ratio(
-    p2d, ct2d, dz,
-    Theta=6.0,
-    theta_anom=0.04,
-    min_prominence=0.0001,   # MATLAB’s 1.8*0.0015
-    thr_iface=1.2,
-    thr_ml=0.6,
-    min_layers=2,
-    max_sep=25.0,
-    peak_mode='zero',
+def detect_staircase_peaks(
+    p2d,
+    ct2d,
+    dz,
+    depth_threshold=310.0,
+    asg_kwargs=None,
+    fixed_kwargs=None,
+    min_prominence=0.003,
+    margin=25.0,
+    min_layers=3
 ):
     """
-    Run peak-and-gradient-ratio staircase detection on each row of p2d, ct2d.
+    Detect double-diffusive staircases based on zero-crossing peak method,
+    restricted to ±margin meters around the coldest (minimum CT) depth.
 
     Parameters
     ----------
-    p2d : numpy.ma.MaskedArray, shape (N, L)
-        Pressure profiles, one per row.
-    ct2d: numpy.ma.MaskedArray, shape (N, L)
-        Conservative Temperature profiles.
+    p2d : ndarray, shape (n_profiles, n_levels)
+        Depth or pressure [m or dbar] arrays.
+    ct2d : numpy.ma.MaskedArray, shape (n_profiles, n_levels)
+        Conservative Temperature profiles (masked where invalid).
     dz : float
-        Vertical spacing in meters.
-    Theta : float
-        Smoothing window width for background (m).
-    theta_anom : float
-        Anomaly threshold for smooth_background (°C).
-    min_prominence : float
-        ΔT prominence threshold for peak detection (°C).
-    thr_iface : float
-        Ratio threshold above which a peak is an interface.
-    thr_ml : float
-        Ratio threshold below which a peak is a mixed-layer core.
-    min_layers : int
-        Min alternating layers (peaks) to call a staircase.
-    max_sep : float
-        Max vertical separation between successive interface peaks (m).
-    peak_mode : str
-        'zero' or 'prom' for find_step_peaks mode.
+        Vertical resolution in meters (unused here but kept for signature).
+    depth_threshold : float, optional
+        Threshold for choosing smoothing method in smooth_background_by_depth.
+    asg_kwargs : dict, optional
+        Passed to smooth_background_by_depth for adaptive smoothing.
+    fixed_kwargs : dict, optional
+        Passed to smooth_background_by_depth for fixed smoothing.
+    min_prominence : float, optional
+        Minimum prominence (|°C|) to accept a peak/trough in CT anomaly.
+    margin : float, optional
+        Vertical window [m] around the coldest-CT depth to restrict detections.
 
     Returns
     -------
-    mask_int   : bool array (N, L)
-        Interface-peak locations for each profile.
-    mask_ml    : bool array (N, L)
-        Mixed-layer-core peaks for each profile.
-    mask_stair : bool array (N, L)
-        Full staircase ranges (filled between first/last interface).
-    segments   : list of lists
-        `segments[i]` is the list of `(start_idx, end_idx)` tuples for profile `i`.
-    ratio2d    : float array (N, L)
-        Gradient ratio for every point in every profile.
-    ct_bg2d    : numpy.ma.MaskedArray (N, L)
-        Smoothed background temperature profiles.
-    ct_anom2d  : numpy.ma.MaskedArray (N, L)
-        Small-scale temperature anomalies.
-    bg_only2d  : numpy.ma.MaskedArray (N, L)
-        Background-only profile masked where anomalies exceed threshold.
+    mask_int : ndarray(bool)
+        True where interface (negative→positive anomaly) detected.
+    mask_ml : ndarray(bool)
+        True where mixed layer (positive→negative anomaly) detected.
+    mask_stair : ndarray(bool)
+        True where either interface or mixed-layer segments occur.
+    segments : list of lists
+        Per-profile list of (start_idx, end_idx, 'int'|'ml') tuples.
+    peaks2d : ndarray(bool)
+        True at detected peaks/troughs in CT anomaly.
+    ct_bg2d : numpy.ma.MaskedArray
+        Smoothed CT background profiles.
+    ct_anom2d : numpy.ma.MaskedArray
+        CT anomalies (ct2d - ct_bg2d).
+    background_only : numpy.ma.MaskedArray
+        Background masked where anomalies exceed detection threshold.
+    max_p_bg : ndarray(float)
+        Depths of maximum CT in background per profile.
+    min_p_bg : ndarray(float)
+        Depths of minimum CT in background per profile (coldest layer).
     """
-    N, L = p2d.shape
-    ct_bg2d, ct_anom2d, bg_only2d = smooth_background(ct2d, dz,
-                                                      Theta=Theta,
-                                                      theta=theta_anom)
+    # 1) Smooth background and compute anomalies
+    ct_bg2d, ct_anom2d, background_only = \
+        smooth_background_by_depth(ct2d, p2d, dz,
+                                    depth_threshold=depth_threshold,
+                                    asg_kwargs=asg_kwargs,
+                                    fixed_kwargs=fixed_kwargs)
 
+    # 2) Prepare raw CT array
+    ct_raw = np.where(np.ma.getmaskarray(ct2d), np.nan, ct2d)
+
+    N, L = ct2d.shape
     mask_int   = np.zeros((N, L), dtype=bool)
     mask_ml    = np.zeros((N, L), dtype=bool)
     mask_stair = np.zeros((N, L), dtype=bool)
-    ratio2d    = np.zeros((N, L), dtype=float)
-    segments   = [None] * N
+    peaks2d    = np.zeros((N, L), dtype=bool)
+    segments   = []
 
+    # 3) Compute background gradient
+    grad_bg = np.full((N, L), np.nan)
     for i in range(N):
-        p      = p2d[i]
-        ct     = ct2d[i]
-        ct_bg  = ct_bg2d[i]
-        anom   = ct_anom2d[i]
+        p_i  = p2d[i]
+        bg_i = ct_bg2d[i].filled(np.nan)
+        grad_bg[i] = np.gradient(bg_i, p_i, edge_order=2)
 
-        # detect peaks in residual
-        peaks_mask = find_step_peaks(anom,
-                                     min_prominence=min_prominence,
-                                     mode=peak_mode)
-        idxs = np.flatnonzero(peaks_mask)
-        if idxs.size == 0:
-            segments[i] = []
-            continue
+    # 4) Find extrema in raw and background CT
+    max_p_raw = np.full(N, np.nan)
+    min_p_raw = np.full(N, np.nan)
+    max_ct_bg  = np.full(N, np.nan)
+    max_p_bg   = np.full(N, np.nan)
+    min_ct_bg  = np.full(N, np.nan)
+    min_p_bg   = np.full(N, np.nan)
 
-        # manual central‐difference gradients
-        ct_vals    = ct.filled(np.nan)
-        ct_bg_vals = ct_bg.filled(np.nan)
-        n = p.size
-        grad_raw = np.full(n, np.nan)
-        grad_bg  = np.full(n, np.nan)
-        for j in range(1, n-1):
-            dp = p[j+1] - p[j-1]
-            if dp == 0:
-                continue
-            grad_raw[j] = (ct_vals[j+1]    - ct_vals[j-1])    / dp
-            grad_bg[j]  = (ct_bg_vals[j+1] - ct_bg_vals[j-1]) / dp
+    # 5) Find extrema per profile
+    for i in range(N):
+        bg = ct_bg2d[i].filled(np.nan)
+        raw = ct_raw[i]
+        p_i = p2d[i]
+        # raw CT extremes
+        if not np.all(np.isnan(raw)):
+            idx_max_raw = np.nanargmax(raw)
+            idx_min_raw = np.nanargmin(raw)
+            max_p_raw[i] = p_i[idx_max_raw]
+            min_p_raw[i] = p_i[idx_min_raw]
+        # smoothed background max
+        if not np.all(np.isnan(bg)):
+            idx_max_bg = np.nanargmax(bg)
+            max_ct_bg[i] = bg[idx_max_bg]
+            max_p_bg[i]  = p_i[idx_max_bg]
+            # search upward (shallower: decreasing index) for grad_bg sign change neg->pos
+            found_sign_change = False
+            for j in range(idx_max_bg-1, 0, -1):
+                g_down = grad_bg[i, j+1]
+                g_up   = grad_bg[i, j]
+                if np.isnan(g_down) or np.isnan(g_up):
+                    continue
+                # detect crossing: gradient negative below and positive above,
+                # but only in upper 200 m
+                if g_down > 0 and g_up < 0 and p_i[j] <= 200.0:
+                    min_ct_bg[i] = bg[j]
+                    min_p_bg[i]  = p_i[j]
+                    found_sign_change = True
+                    break
+            # fallback: if no sign change, use raw CT minimum depth
+            if not found_sign_change:
+                raw_vals = raw
+                # ensure there is valid raw data
+                if not np.all(np.isnan(raw_vals)):
+                    idx_min_raw = np.nanargmin(raw_vals)
+                    min_ct_bg[i] = raw_vals[idx_min_raw]
+                    min_p_bg[i]  = p_i[idx_min_raw]
 
-        eps   = 1e-8
-        ratio = np.abs(grad_raw) / np.maximum(np.abs(grad_bg), eps)
-        ratio2d[i] = ratio
+    # 5) Detect peaks/troughs in each CT anomaly
+    for i in range(N):
+        anom = ct_anom2d[i].filled(np.nan)
+        peaks2d[i] = find_step_peaks(anom,
+                                        min_prominence=min_prominence,
+                                        mode='zero')
 
-        # group interface‐type peaks into staircase segments
-        is_iface   = ratio[idxs] >  thr_iface
-        iface_idxs = idxs[is_iface]
-        splits     = np.where(np.diff(p[iface_idxs]) > max_sep)[0] + 1
-        groups     = np.split(iface_idxs, splits)
-
+    # 6) Label layers between successive peaks
+    for i in range(N):
+        idxs = np.where(peaks2d[i])[0]
         segs = []
-        for grp in groups:
-            if grp.size < min_layers:
+        anom = ct_anom2d[i].filled(np.nan)
+        for k in range(len(idxs) - 1):
+            start, end = idxs[k], idxs[k+1]
+            v0, v1 = anom[start], anom[end]
+            if np.isnan(v0) or np.isnan(v1):
                 continue
-            types = np.where(ratio[grp] > thr_iface, 'I', 'M')
-            if np.all(types[:-1] != types[1:]):
-                segs.append((grp[0], grp[-1]))
-        segments[i] = segs
+            if v0 < 0 and v1 > 0:
+                mask_int[i, start:end+1] = True
+                segs.append((start, end, 'int'))
+            elif v0 > 0 and v1 < 0:
+                mask_ml[i, start:end+1] = True
+                segs.append((start, end, 'ml'))
+        segments.append(segs)
 
-        # Stage 1: classify by residual‐sign only
-        resid = anom.filled(np.nan)
-        ml_cands  = []
-        int_cands = []
-        for start_idx, end_idx in segs:
-            if resid[start_idx] > 0 and resid[end_idx] < 0:
-                ml_cands.append((start_idx, end_idx))
-            elif resid[start_idx] < 0 and resid[end_idx] > 0:
-                int_cands.append((start_idx, end_idx))
+    # 7) Restrict detections to ±margin around coldest CT depth
+    lower = min_p_bg + margin
+    upper = max_p_bg - margin
+    
+    for i in range(N):
+        lo, hi = lower[i], upper[i]
+        region = (p2d[i] >= lo) & (p2d[i] <= hi)
+        mask_int[i] &= region
+        mask_ml[i]  &= region
+    
+    
+    # 9) Enforce minimum layer count
+    for i in range(N):
+        if len(segments[i]) < min_layers:
+            mask_int[i][:] = False
+            mask_ml[i][:]  = False
 
-        # Stage 2: gradient‐ratio filter
-        for start_idx, end_idx in ml_cands:
-            if np.nanmin(ratio[start_idx:end_idx+1]) < thr_ml:
-                mask_ml[i, start_idx:end_idx+1]    = True
-                mask_stair[i, start_idx:end_idx+1] = True
+    # 8) Combine interface & mixed-layer masks
+    mask_stair = mask_int | mask_ml
 
-        for start_idx, end_idx in int_cands:
-            if np.nanmax(ratio[start_idx:end_idx+1]) > thr_iface:
-                mask_int[i, start_idx:end_idx+1]   = True
-                mask_stair[i, start_idx:end_idx+1] = True
-
-    return mask_int, mask_ml, mask_stair, segments, ratio2d, ct_bg2d, ct_anom2d, bg_only2d
+    return (
+        mask_int,
+        mask_ml,
+        mask_stair,
+        segments,
+        peaks2d,
+        ct_bg2d,
+        ct_anom2d,
+        background_only,
+        max_p_bg,
+        min_p_bg
+    )

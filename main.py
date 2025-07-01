@@ -9,6 +9,7 @@ from create_netcdf import create_netcdf
 from config import FIXED_RESOLUTION_METER
 from sc_detector_grad import detect_staircase_gradient_ratio
 from smooth_temp import *
+from sc_detector_peaks import detect_staircase_peaks
 
 """
 Script to process CTD data: smooth temperature profiles and save to NetCDF.
@@ -92,9 +93,7 @@ for src_zip in zip_files:
     shutil.rmtree(tmp_dir)
 
     # Smooth background temperature profiles
-    mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only, max_p, min_p = detect_staircase_gradient_ratio(p, ct, FIXED_RESOLUTION_METER)
-    
-    ct_bg, ct_anom, background_only = smooth_background_by_depth(ct, p, FIXED_RESOLUTION_METER)
+    mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only, max_p, min_p = detect_staircase_peaks(p, ct, FIXED_RESOLUTION_METER)
 
     # Define output NetCDF path
     out_ncfile = os.path.join(OUTPUT_DIR, os.path.splitext(src_zip)[0] + '.nc')
