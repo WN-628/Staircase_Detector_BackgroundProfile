@@ -5,14 +5,14 @@ from peak_prominence import find_step_peaks
 
 # USER CONFIG ─────────────────────────────────────────
 nc_path   = 'prod_files/itp65cormat.nc'
-target_id = 6  # change to your FloatID
+target_id = 199  # change to your FloatID
 
 # 1) Open the file and find the profile index
 ds        = Dataset(nc_path, 'r')
 float_ids = ds.variables['FloatID'][:]       # shape (Nobs,)
 inds      = np.where(float_ids == target_id)[0]
 if inds.size == 0:
-    raise ValueError(f"FloatID {target_id} not found in following float IDs: {float_ids}")
+    raise ValueError(f"FloatID {target_id} not found in following float IDs: {sorted(float_ids.tolist())}")
 prof      = int(inds[0])
 
 # 2) Read masks

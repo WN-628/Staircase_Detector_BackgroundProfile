@@ -39,6 +39,9 @@ zip_files = [f for f in os.listdir(INPUT_DIR) if f.endswith('.zip')]
 if not zip_files:
     print(f"⚠️ No .zip files found in '{INPUT_DIR}'")
     exit(0)
+    
+
+count = 0
 
 # Loop over zip files containing CTD CSVs
 for src_zip in zip_files:
@@ -133,7 +136,11 @@ for src_zip in zip_files:
         sc_var[i]      = mask_sc[i, vm]
         depth_max_T[i] = max_p[i] 
         depth_min_T[i] = min_p[i]
+        
+    count += 1
 
 
     fh.close()
     print(f"✅ Written staircase data to '{out_ncfile}'")
+
+print(f"Processed {count} .nc files. Output saved to '{OUTPUT_DIR}'")

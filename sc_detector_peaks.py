@@ -74,7 +74,7 @@ def detect_staircase_peaks(
     mask_ml    = np.zeros((N, L), dtype=bool)
     mask_stair = np.zeros((N, L), dtype=bool)
     peaks2d    = np.zeros((N, L), dtype=bool)
-    segments   = []
+    segments = [[] for _ in range(N)]
 
     # 3) Compute background gradient
     grad_bg = np.full((N, L), np.nan)
@@ -116,7 +116,7 @@ def detect_staircase_peaks(
                     continue
                 # detect crossing: gradient negative below and positive above,
                 # but only in upper 200 m
-                if g_down > 0 and g_up < 0 and p_i[j] <= 200.0:
+                if g_down > 0 and g_up < 0 and p_i[j] <= 250.0:
                     min_ct_bg[i] = bg[j]
                     min_p_bg[i]  = p_i[j]
                     found_sign_change = True
@@ -130,49 +130,40 @@ def detect_staircase_peaks(
                     min_ct_bg[i] = raw_vals[idx_min_raw]
                     min_p_bg[i]  = p_i[idx_min_raw]
 
-    # 5) Detect peaks/troughs in each CT anomaly
+    # 6) Detect peaks/troughs in each CT anomaly
     for i in range(N):
         anom = ct_anom2d[i].filled(np.nan)
         peaks2d[i] = find_step_peaks(anom,
                                         min_prominence=min_prominence,
                                         mode='zero')
-
-    # 6) Label layers between successive peaks
+    
+    # 6) Build segments from adjacent peaks only
+    segments = [[] for _ in range(N)]
     for i in range(N):
-        idxs = np.where(peaks2d[i])[0]
-        segs = []
-        anom = ct_anom2d[i].filled(np.nan)
-        for k in range(len(idxs) - 1):
-            start, end = idxs[k], idxs[k+1]
-            v0, v1 = anom[start], anom[end]
+        # if you want to restrict to ±margin, compute region here:
+        region = (p2d[i] >= min_p_bg[i] + margin) & (p2d[i] <= max_p_bg[i] - margin)
+        idxs = np.where(peaks2d[i] & region)[0]
+
+        for start, end in zip(idxs[:-1], idxs[1:]):
+            v0 = ct_anom2d[i].filled(np.nan)[start]
+            v1 = ct_anom2d[i].filled(np.nan)[end]
             if np.isnan(v0) or np.isnan(v1):
                 continue
-            if v0 < 0 and v1 > 0:
+            if v0 < 0 < v1:
+                segments[i].append((start, end, 'int'))
+            elif v0 > 0 > v1:
+                segments[i].append((start, end, 'ml'))
+
+    # 7) Paint masks strictly from those segments
+    mask_int[:] = False
+    mask_ml[:]  = False
+    for i, segs in enumerate(segments):
+        for start, end, kind in segs:
+            if kind == 'int':
                 mask_int[i, start:end+1] = True
-                segs.append((start, end, 'int'))
-            elif v0 > 0 and v1 < 0:
+            else:
                 mask_ml[i, start:end+1] = True
-                segs.append((start, end, 'ml'))
-        segments.append(segs)
 
-    # 7) Restrict detections to ±margin around coldest CT depth
-    lower = min_p_bg + margin
-    upper = max_p_bg - margin
-    
-    for i in range(N):
-        lo, hi = lower[i], upper[i]
-        region = (p2d[i] >= lo) & (p2d[i] <= hi)
-        mask_int[i] &= region
-        mask_ml[i]  &= region
-    
-    
-    # 9) Enforce minimum layer count
-    for i in range(N):
-        if len(segments[i]) < min_layers:
-            mask_int[i][:] = False
-            mask_ml[i][:]  = False
-
-    # 8) Combine interface & mixed-layer masks
     mask_stair = mask_int | mask_ml
 
     return (
