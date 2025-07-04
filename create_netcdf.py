@@ -3,6 +3,8 @@ import numpy as np
 
 from config import FIXED_RESOLUTION_METER
 
+'''This module creates a NetCDF4 file with variable-length (vlen) arrays for profiles and masks'''
+
 def create_netcdf(filename, _nlevels_unused=None):
     """
     Create a NetCDF4 file with variable-length (vlen) arrays for profiles and masks.

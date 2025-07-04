@@ -7,6 +7,12 @@ from datetime import datetime
 
 from config import FIXED_RESOLUTION_METER
 
+''' 
+This module provides a function to load data from CSV files in a specified directory. It also handles interpolation of data if required. 
+
+It extracts pressure, temperature, and salinity data, converts them to absolute salinity (SA) and conservative temperature (CT) using the GSW library, and returns the processed profiles along with metadata. 
+'''
+
 # List to record files skipped due to depth threshold
 SKIPPED_DEPTH_FILES = []
 

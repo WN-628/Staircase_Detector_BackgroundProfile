@@ -4,11 +4,10 @@ from scipy.ndimage import uniform_filter1d
 from scipy.signal import savgol_coeffs
 from scipy.interpolate import UnivariateSpline
 
-# ----------------------------------------------------------------------------
-# smoothing_temp.py
-# Apply a running-mean smoother to CTD temperature data (background profile)
-# and optionally flag small-scale anomalies.
-# ----------------------------------------------------------------------------
+'''
+smoothing_temp.py
+Apply a running-mean smoother to CTD temperature data (background profile) and optionally flag small-scale anomalies.
+'''
 
 def smooth_background_fixed(ct, dz, Theta=8.0, theta=0.04):
     """

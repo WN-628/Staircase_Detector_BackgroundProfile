@@ -2,6 +2,12 @@ import numpy as np
 from smooth_temp import smooth_background_by_depth
 from peak_prominence import find_step_peaks
 
+'''
+This file detects double-diffusive staircases in temperature profiles using a zero-crossing peak method.
+
+Note: The function is designed to work with 2D arrays of depth/pressure and temperature profiles. find_step_peaks is used to identify peaks and troughs in the CT anomaly profiles.
+'''
+
 def detect_staircase_peaks(
     p2d,
     ct2d,
@@ -10,8 +16,7 @@ def detect_staircase_peaks(
     asg_kwargs=None,
     fixed_kwargs=None,
     min_prominence=0.003,
-    margin=25.0,
-    min_layers=3
+    margin=25.0
 ):
     """
     Detect double-diffusive staircases based on zero-crossing peak method,

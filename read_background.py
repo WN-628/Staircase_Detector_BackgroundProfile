@@ -3,6 +3,11 @@ import numpy as np
 import netCDF4 as nc
 import matplotlib.pyplot as plt
 
+'''
+This file reads a NetCDF file containing temperature profiles and plots the original temperature profile, background-only CT, and CT anomaly for a specified profile.
+'''
+
+
 # Read the NetCDF file
 nc_path = os.path.join('prod_files', 'itp65cormat.nc')
 if not os.path.isfile(nc_path):

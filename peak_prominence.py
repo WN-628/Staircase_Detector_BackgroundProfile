@@ -3,6 +3,14 @@ import numpy as np
 from scipy.signal import find_peaks, peak_prominences
 import matplotlib.pyplot as plt
 
+'''
+This module provides a function to detect peaks or troughs in a CT anomaly profile using two methods:
+1. Zero-crossing maximum absolute value method.
+2. Prominence-based local peak detection.
+
+It also provides an example usage commented out at the end.
+'''
+
 def find_step_peaks(ct_anom, min_prominence=0.005, mode='prom'):
     """
     Identify peaks/troughs per zero-crossing segment in a CT anomaly profile.

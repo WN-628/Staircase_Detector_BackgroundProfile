@@ -7,16 +7,16 @@ import numpy as np
 from data_preparation import load_data_csv_zip
 from create_netcdf import create_netcdf
 from config import FIXED_RESOLUTION_METER
-from sc_detector_grad import detect_staircase_gradient_ratio
+from sc_detector_grad import filter_staircase_masks_local
 from smooth_temp import *
 from sc_detector_peaks import detect_staircase_peaks
 
-"""
+'''
 Script to process CTD data: smooth temperature profiles and save to NetCDF.
 Expects:
-  - INPUT_DIR: directory with .zip files of CTD CSVs
-  - OUTPUT_DIR: empty or new directory for .nc outputs
-"""
+    - INPUT_DIR: directory with .zip files of CTD CSVs
+    - OUTPUT_DIR: empty or new directory for .nc outputs
+'''
 
 # --- Configuration: input and output folders ---
 INPUT_DIR = 'gridData_zip'
@@ -39,7 +39,7 @@ zip_files = [f for f in os.listdir(INPUT_DIR) if f.endswith('.zip')]
 if not zip_files:
     print(f"⚠️ No .zip files found in '{INPUT_DIR}'")
     exit(0)
-    
+
 
 count = 0
 
@@ -95,8 +95,18 @@ for src_zip in zip_files:
     # Clean up temporary files
     shutil.rmtree(tmp_dir)
 
-    # Smooth background temperature profiles
+    # Apply peak finding method for staircase detection
     mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only, max_p, min_p = detect_staircase_peaks(p, ct, FIXED_RESOLUTION_METER)
+    
+    # Filter staircase masks locally based on gradient ratio
+    gradient_kwargs = {'Theta':40.0, 'theta_anom':0.06,
+                        'thr_iface':1.1, 'thr_ml':0.7}
+    
+    mask_int, mask_ml, mask_sc = filter_staircase_masks_local(
+        p, ct, FIXED_RESOLUTION_METER,
+        mask_int, mask_ml,
+        **gradient_kwargs
+    )
 
     # Define output NetCDF path
     out_ncfile = os.path.join(OUTPUT_DIR, os.path.splitext(src_zip)[0] + '.nc')
@@ -136,9 +146,8 @@ for src_zip in zip_files:
         sc_var[i]      = mask_sc[i, vm]
         depth_max_T[i] = max_p[i] 
         depth_min_T[i] = min_p[i]
-        
-    count += 1
 
+    count += 1
 
     fh.close()
     print(f"✅ Written staircase data to '{out_ncfile}'")

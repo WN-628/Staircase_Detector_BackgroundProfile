@@ -1,11 +1,12 @@
-"""
-plot_profiles.py: Read a NetCDF file and plot all temperature profiles side by side,
-highlighting staircase points (mask_sc).
-"""
 import netCDF4 as nc
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+
+'''
+plot_profiles.py: Read a NetCDF file and plot all temperature profiles side by side,
+highlighting staircase points (mask_sc).
+'''
 
 def plot_profiles(nc_file):
     """

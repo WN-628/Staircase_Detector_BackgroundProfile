@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 nc_dir = 'prod_files'
 nc_files = glob.glob(f'{nc_dir}/*.nc')
 
+# ------ Compute gradient ratios in mixed-layer and interface segments -----
+
 ratio_ml = []
 ratio_int = []
 
@@ -65,6 +67,52 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
+# ------ Identify profiles with mixed-layer gradient ratio > 1.0 -----
+
+threshold = 1.0
+exceed_list = []
+
+for fn in glob.glob('prod_files/*.nc'):
+    ds = xr.open_dataset(fn)
+    Nobs = ds.sizes['Nobs']
+    
+    for prof in range(Nobs):
+        p     = ds['pressure'].isel(Nobs=prof).values
+        ct    = ds['ct'].isel(Nobs=prof).values
+        ct_bg = ds['ct_bg'].isel(Nobs=prof).values
+        ml    = ds['mask_ml'].isel(Nobs=prof).values.astype(bool)
+        
+        grad_raw = np.gradient(ct, p, edge_order=2)
+        grad_bg  = np.gradient(ct_bg, p, edge_order=2)
+        ratio    = (grad_raw) / np.maximum((grad_bg), 1e-8)
+        
+        mask_exceed = ml & (ratio > threshold)
+        if np.any(mask_exceed):
+            depths = p[mask_exceed]
+            depths_fmt = [f"{d:.3f}" for d in depths]
+            max_ratio = ratio[mask_exceed].max()
+            exceed_list.append({
+                'file': fn,
+                'profile': prof,
+                'max_ratio': max_ratio,
+                'depths_m': depths_fmt
+            })
+    ds.close()
+
+if exceed_list:
+    print("Profiles with mixed-layer gradient ratio > 1.0:\n")
+    for rec in exceed_list:
+        print(f"File: {rec['file']}")
+        print(f" Profile #: {rec['profile']}")
+        print(f"  → max ratio = {rec['max_ratio']:.2f}")
+        print(f"  → at pressures (m): {', '.join(rec['depths_m'])}")
+        print()
+else:
+    print("No mixed-layer ratio exceeded 1.0.")
+
+
+# ------ Compute mixed-layer thickness and interface temperature width -----
+
 # mixed_thicknesses = []
 # interface_widths = []
 
@@ -121,6 +169,9 @@ plt.show()
 # plt.tight_layout()
 # plt.xlim(0, 0.25)
 # plt.show()
+
+
+# ------ Compute temperature gradients in mixed-layer and interface segments -----
 
 # grad_ml = []
 # grad_int = []

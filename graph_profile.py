@@ -5,7 +5,7 @@ from peak_prominence import find_step_peaks
 
 # USER CONFIG ─────────────────────────────────────────
 nc_path   = 'prod_files/itp65cormat.nc'
-target_id = 199  # change to your FloatID
+target_id = 6  # change to your FloatID
 
 # 1) Open the file and find the profile index
 ds        = Dataset(nc_path, 'r')
