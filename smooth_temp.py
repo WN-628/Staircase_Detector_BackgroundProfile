@@ -3,6 +3,7 @@ import numpy as np
 from scipy.ndimage import uniform_filter1d
 from scipy.signal import savgol_coeffs
 from scipy.interpolate import UnivariateSpline
+from scipy.ndimage import gaussian_filter1d
 
 '''
 smoothing_temp.py
@@ -193,5 +194,60 @@ def smooth_background_by_depth(ct, depth, dz, depth_threshold=310,
         ct_bg[i]         = bg[0]
         ct_anom[i]       = anom[0]
         background_only[i] = bg_only[0]
+
+    return ct_bg, ct_anom, background_only
+        
+# ----------------------------------------------------------------------------# smooth_background_by_depth
+# ----------------------------------------------------------------------------
+
+def smooth_background_gaussian(ct, dz, sigma=6.0, theta=0.04):
+    """
+    Compute a smoothed (background) temperature profile using a Gaussian filter,
+    and flag small‐scale anomalies.
+
+    Parameters
+    ----------
+    ct : numpy.ma.MaskedArray
+        2D array of Conservative Temperature with shape (n_profiles, n_levels).
+    dz : float
+        Vertical resolution in meters (e.g., 1.0 m).
+    sigma : float, optional
+        Standard deviation of the Gaussian kernel in meters (default 6.0).
+    theta : float, optional
+        Anomaly threshold in degrees Celsius (default 0.04).
+
+    Returns
+    -------
+    ct_bg : numpy.ma.MaskedArray
+        Smoothed background temperature profiles.
+    ct_anom : numpy.ma.MaskedArray
+        Small‐scale temperature anomalies (ct - ct_bg).
+    background_only : numpy.ma.MaskedArray
+        Background profile masked where anomalies exceed threshold.
+    """
+    # Convert sigma from meters to data‐point units
+    sigma_pts = sigma / dz
+
+    # Allocate output
+    ct_bg = np.full_like(ct, np.nan)
+
+    # Apply Gaussian smoothing profile‐by‐profile
+    for i in range(ct.shape[0]):
+        valid = ~ct.mask[i]
+        if not valid.any():
+            continue
+        raw = ct.data[i, valid]
+        sm = gaussian_filter1d(raw, sigma=sigma_pts, mode='nearest')
+        ct_bg[i, valid] = sm
+
+    # Re‐mask invalid points
+    ct_bg = np.ma.masked_where(ct.mask, ct_bg)
+
+    # Compute anomalies
+    ct_anom = ct - ct_bg
+
+    # Mask out large anomalies to get a “background‐only” field
+    bg_mask     = np.abs(ct_anom) < theta
+    background_only = np.ma.masked_where(~bg_mask, ct_bg)
 
     return ct_bg, ct_anom, background_only

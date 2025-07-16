@@ -1,5 +1,5 @@
 import numpy as np
-from smooth_temp import smooth_background_fixed
+from smooth_temp import smooth_background_gaussian
 from config import FIXED_RESOLUTION_METER
 
 '''
@@ -144,7 +144,7 @@ def detect_staircase_gradient_ratio(
     N, L = p2d.shape
 
     # 1) Smooth background and anomalies
-    ct_bg2d, ct_anom2d, background_only = smooth_background_fixed(
+    ct_bg2d, ct_anom2d, background_only = smooth_background_gaussian(
         ct2d, dz, Theta=Theta, theta=theta_anom
     )
 
@@ -296,9 +296,8 @@ def filter_staircase_masks_local(p2d, ct2d, dz,
     ml_min_grid = int(np.ceil(ml_min_depth / resolution))
 
     # smooth background once
-    ct_bg2d, _, _ = smooth_background_fixed(ct2d, dz,
-                                            Theta=Theta,
-                                            theta=theta_anom)
+    ct_bg2d, _, _ = smooth_background_gaussian(ct2d, dz, sigma=20.0,
+                                            theta=Theta)
 
     # prepare filtered masks
     mask_int_f = np.zeros_like(mask_int, dtype=bool)
@@ -322,7 +321,7 @@ def filter_staircase_masks_local(p2d, ct2d, dz,
                 grad_raw = (raw[j1+1] - raw[j0-1]) / (z_hi - z_lo)
                 bg  = ct_bg2d[i]
                 grad_bg  = (bg[j1+1] - bg[j0-1]) / (z_hi - z_lo)
-                ratio = abs(grad_raw) / max(abs(grad_bg), eps)
+                ratio = grad_raw / max(grad_bg, eps)
                 if ratio > thr_iface:
                     mask_int_f[i, j0:j1+1] = True
 
@@ -360,4 +359,4 @@ def filter_staircase_masks_local(p2d, ct2d, dz,
         clean_int[i] = (cleaned == 2)
         mask_sc[i]   = (cleaned > 0)
 
-    return clean_int, clean_ml, mask_sc
+    return clean_int, clean_ml, mask_sc, ct_bg2d

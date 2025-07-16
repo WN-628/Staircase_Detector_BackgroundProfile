@@ -30,7 +30,7 @@ for fn in nc_files:
         
         # 3) compute ratio with small‐number safeguard
         eps   = 1e-8
-        ratio = np.abs(grad_raw) / np.maximum(np.abs(grad_bg), eps)
+        ratio = grad_raw / np.maximum(grad_bg, eps)
         
         # 4) collect only the values in each mask
         ratio_ml.extend(ratio[ml])

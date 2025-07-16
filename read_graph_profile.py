@@ -2,6 +2,8 @@ import numpy as np
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
 from peak_prominence import find_step_peaks
+from smooth_temp import *
+from config import FIXED_RESOLUTION_METER
 
 # USER CONFIG ─────────────────────────────────────────
 nc_path   = 'prod_files/itp65cormat.nc'

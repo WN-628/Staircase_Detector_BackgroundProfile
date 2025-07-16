@@ -1,27 +1,40 @@
 # Staircase_Detector_BackgroundProfile
 
-## Description
+## Description:
 
 - This code aims to detect staircase structures in ITP profiles using the method by comparing with the background profile as mentioned in [Sommer et al.](https://doi.org/10.1175/JTECH-D-12-00272.1)  
 
 ------
 
-## Features
+## Algorithm Design:
 
 - **Flexible CSV ingestion**
-   • Reads any number of zipped CSV files from folder **gridData_zip**
-   • Automatically skips non‐CSV files and lists skipped files.
-- **Physical preprocessing**
-   • Converts Practical Salinity → Absolute Salinity → Conservative Temperature (via [GSW](https://teos-10.github.io/GSW-Python/)).
-   • Optionally interpolates to a fixed vertical grid (default: 0.25 m).
-- **Background smoothing & anomaly detection**
-   • Applies a running‐mean smoother over a configurable window (default: 6 m).
-   • Computes small‐scale temperature anomalies and masks “background‐only” regions.
+   - Reads any number of zipped CSV files from folder **gridData_zip**
+   - Automatically skips and lists skipped non-CSV files in the .zip file.
+
+- **Physical preprocessing**: in  `data_prepration.py`
+   - Converts Practical Salinity → Absolute Salinity → Conservative Temperature (via [GSW](https://teos-10.github.io/GSW-Python/)).
+   - Optionally interpolates to a fixed vertical grid (default: 0.25 m), which is turned off by default since we are using data that are alreayd interpolated.
+
+- **Background smoothing & anomaly detection**: 
+   - Applies a running‐mean smoother over a configurable window (default: 6 m) in `smooth_temp.py`
+   - Find staircase structure based purely on peaks finding method, where peaks are found between two zero-residual points, with the residual value being at least 0.003. `sc_detector_peaks.py` which calls `peak_prominence.py`
+   - Produces: `mask_int`, `mask_ml`, `mask_sc`, `ct_bg`, `ct_anom`, `max_p`, `min_p`
+
+- **Temperature gradient ratio criteria**:
+   - By calling function `filter_staircase_masks_local` from `sc_detector_grad`, calculate the temperature gradient ratio between the original temperature profile and the smooted temperature profiled smoothed by Gaussian distribution with the function `smooth_background_gaussian` from `smooth_temp.py`. 
+   - Temperature gradient ratio threshold: **interface**: 1.5, **mixed_layer**: 0.5
+
 - **NetCDF4 output with variable–length arrays**
-   • Stores each profile’s raw data (`pressure`, `ct`, `sa`) alongside `ct_bg`, `ct_anom`, and `ct_bg_only`.
-   • Includes profile metadata (`lat`, `lon`, `dates`, `FloatID`), extrema (`depth_max_T`, `depth_min_T`), and layer masks (`mask_ml`, `mask_int`, `mask_cl`, `mask_sc`, `cl_mushy`, `cl_supermushy`) as VL-arrays.
+   - Stores each profile’s raw data (`pressure`, `ct`, `sa`) alongside `ct_bg`, `ct_anom`, and `ct_bg_only`.
+   - Includes profile metadata (`lat`, `lon`, `dates`, `FloatID`), extrema (`depth_max_T`, `depth_min_T`), and detect layer masks (`mask_ml`, `mask_int`, `mask_cl`, `mask_sc`, `cl_mushy`, `cl_supermushy`) as VL-arrays with the same size of the original pressure.
+
 - **Quick‐look plotting utility**
-   • `read_background.py` reads a given NetCDF and produces side-by-side plots of raw vs. background temperature and the anomaly profile.
+   - `read_background_heatmap.py` reads a given NetCDF and produces a heatmap on the depth vs temperature to show the value of temperature gradient ratio between the original temperature profile and the smoothed temperature profile. 
+   - `read_graph_profile.py` graphs the temperature profile for a specific file in a specific itp number which shows the detected interface and mixed layer
+   - `read_histogram.py` reads all the .nc files in the folder **prod_files** and plots the temperature gradient ratio for the detected mixed layers and interfaces. 
+   - `read_plot.profiles.py` plots all the temperature profile in one ITP side by side with the staircase structures labelled.  
+
 
 ------
 

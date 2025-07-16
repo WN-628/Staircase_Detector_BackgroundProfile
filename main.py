@@ -98,14 +98,15 @@ for src_zip in zip_files:
     # Apply peak finding method for staircase detection
     mask_int, mask_ml, mask_sc, segments, ratio2d, ct_bg, ct_anom, background_only, max_p, min_p = detect_staircase_peaks(p, ct, FIXED_RESOLUTION_METER)
     
+    # ct_bg, ct_anom, background_only = smooth_background_gaussian(ct, FIXED_RESOLUTION_METER, sigma=20.0, theta=6.0)
+    
     # Filter staircase masks locally based on gradient ratio
     gradient_kwargs = {'Theta':40.0, 'theta_anom':0.06,
-                        'thr_iface':1.1, 'thr_ml':0.7}
+                        'thr_iface':1.5, 'thr_ml':0.5}
     
-    mask_int, mask_ml, mask_sc = filter_staircase_masks_local(
+    mask_int, mask_ml, mask_sc, ct_bg = filter_staircase_masks_local(
         p, ct, FIXED_RESOLUTION_METER,
-        mask_int, mask_ml,
-        **gradient_kwargs
+        mask_int, mask_ml, **gradient_kwargs
     )
 
     # Define output NetCDF path
