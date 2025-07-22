@@ -40,7 +40,6 @@ if not zip_files:
     print(f"⚠️ No .zip files found in '{INPUT_DIR}'")
     exit(0)
 
-
 count = 0
 
 # Loop over zip files containing CTD CSVs
@@ -102,7 +101,7 @@ for src_zip in zip_files:
     
     # Filter staircase masks locally based on gradient ratio
     gradient_kwargs = {'Theta':40.0, 'theta_anom':0.06,
-                        'thr_iface':1.5, 'thr_ml':0.5}
+                        'thr_iface':1.8, 'thr_ml':0.6}
     
     mask_int, mask_ml, mask_sc, ct_bg = filter_staircase_masks_local(
         p, ct, FIXED_RESOLUTION_METER,
