@@ -24,6 +24,9 @@ for fn in nc_files:
         ml    = ds['mask_ml'].isel(Nobs=i).values.astype(bool)
         ii    = ds['mask_int'].isel(Nobs=i).values.astype(bool)
         
+        if ct.size < 3 or p.size < 3:
+            continue
+        
         # 2) compute raw & background gradients
         grad_raw = np.gradient(ct, p, edge_order=2)
         grad_bg  = np.gradient(ct_bg, p, edge_order=2)
@@ -81,6 +84,9 @@ for fn in glob.glob('prod_files/*.nc'):
         ct    = ds['ct'].isel(Nobs=prof).values
         ct_bg = ds['ct_bg'].isel(Nobs=prof).values
         ml    = ds['mask_ml'].isel(Nobs=prof).values.astype(bool)
+        
+        if ct.size < 3 or p.size < 3:
+            continue
         
         grad_raw = np.gradient(ct, p, edge_order=2)
         grad_bg  = np.gradient(ct_bg, p, edge_order=2)

@@ -6,8 +6,8 @@ from smooth_temp import *
 from config import FIXED_RESOLUTION_METER
 
 # USER CONFIG ─────────────────────────────────────────
-nc_path   = 'prod_files/itp65cormat.nc'
-target_id = 1  # change to your FloatID
+nc_path   = 'prod_files/itp18cormat.nc'
+target_id = 772  # change to your FloatID
 
 # 1) Open the file and find the profile index
 ds        = Dataset(nc_path, 'r')
