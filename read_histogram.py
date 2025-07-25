@@ -3,6 +3,8 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
+'''This script computes and plots the temperature gradient ratios in mixed-layer and interface segments from NetCDF files. It also identifies profiles with a mixed-layer gradient ratio exceeding a specified threshold.'''
+
 # Directory containing your NetCDF files
 nc_dir = 'prod_files'
 nc_files = glob.glob(f'{nc_dir}/*.nc')

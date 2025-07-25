@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import os
 from datetime import datetime
 
+''' This script reads temperature profiles from netCDF files for a specified year and plots them with mixed-layer and interface markers in waterfall plots. '''
+
 # ── CONFIG ─────────────────────────────────────────
 folder = 'prod_files'
 target_year = 2018

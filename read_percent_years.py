@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from collections import defaultdict
 
+''' This script reads all netCDF files in a directory and computes the percentage of profiles with at least one mixed layer per year. It then plots this percentage over the years in a scatter plot. '''
+
 # ── CONFIG ─────────────────────────────────────────
 folder = 'prod_files'
 # ───────────────────────────────────────────────────

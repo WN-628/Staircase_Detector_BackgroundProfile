@@ -5,6 +5,10 @@ from netCDF4 import Dataset
 from datetime import datetime
 import matplotlib.pyplot as plt
 
+'''
+This script computes and plots the average mixed-layer thickness and interface temperature width in scatter plots with either standard error of the mean (SEM) or 25th–75th percentile error bars.
+'''
+
 # ── USER SETTINGS ──────────────────────────────────────────────────────────
 
 NC_DIR      = 'prod_files'   # directory with your .nc files
