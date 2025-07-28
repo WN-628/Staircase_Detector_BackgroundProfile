@@ -155,50 +155,48 @@ def plot_yearly_with_error(years, means, errors,
     plt.show()
 
 
-# if __name__ == '__main__':
-#     # example: use SEM
-#     yrs_ml, avg_ml, err_ml = compute_avg_ml_by_year(
-#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
-#         error_type='sem',
-#     )
-#     plot_yearly_with_error(
-#         yrs_ml, avg_ml, err_ml,
-#         ylabel='Mean Mixed-Layer Thickness (m)',
-#         title=f'Mixed-Layer Thickness (sem): {DEPTH_MIN:.0f}–{DEPTH_MAX:.0f} m'
-#     )
+if __name__ == '__main__':
+    # example: use SEM
+    yrs_ml, avg_ml, err_ml = compute_avg_ml_by_year(
+        NC_DIR, DEPTH_MIN, DEPTH_MAX,
+        error_type='sem',
+    )
+    plot_yearly_with_error(
+        yrs_ml, avg_ml, err_ml,
+        ylabel='Mean Mixed-Layer Thickness (m)',
+        title=f'Mixed-Layer Thickness (sem): {DEPTH_MIN:.0f}–{DEPTH_MAX:.0f} m'
+    )
 
-#     yrs_int, avg_int, err_int = compute_avg_interface_temp_by_year(
-#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
-#         error_type='sem',
-#     )
-#     plot_yearly_with_error(
-#         yrs_int, avg_int, err_int,
-#         ylabel='Mean Interface ΔT (°C)',
-#         title=f'Interface ΔT (sem): {DEPTH_MIN:.0f}–{DEPTH_MAX:.0f} m'
-#     )
+    yrs_int, avg_int, err_int = compute_avg_interface_temp_by_year(
+        NC_DIR, DEPTH_MIN, DEPTH_MAX,
+        error_type='sem',
+    )
+    plot_yearly_with_error(
+        yrs_int, avg_int, err_int,
+        ylabel='Mean Interface ΔT (°C)',
+        title=f'Interface ΔT (sem): {DEPTH_MIN:.0f}–{DEPTH_MAX:.0f} m'
+    )
     
-#     # example: use 1st & 3rd quartiles
-#     yrs_ml, avg_ml, err_ml = compute_avg_ml_by_year(
-#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
-#         error_type='percentile',
-#         percentiles=(25, 75),
-#     )
-#     plot_yearly_with_error(
-#         yrs_ml, avg_ml, err_ml,
-#         ylabel='Mean Mixed-Layer Thickness (m)',
-#         title=f'Mixed-Layer Thickness (25th–75th pct): {DEPTH_MIN:.0f}–{DEPTH_MAX:.0f} m'
-#     )
+    # example: use 1st & 3rd quartiles
+    yrs_ml, avg_ml, err_ml = compute_avg_ml_by_year(
+        NC_DIR, DEPTH_MIN, DEPTH_MAX,
+        error_type='sem'
+    )
+    plot_yearly_with_error(
+        yrs_ml, avg_ml, err_ml,
+        ylabel='Mean Mixed-Layer Thickness (m)',
+        title=f'Yearly Mean Mixed-Layer Height (250–500 m): Standard Error of the Mean'
+    )
     
-#     yrs_int, avg_int, err_int = compute_avg_interface_temp_by_year(
-#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
-#         error_type='percentile',
-#         percentiles=(25, 75),
-#     )
-#     plot_yearly_with_error(
-#         yrs_int, avg_int, err_int,
-#         ylabel='Mean Interface ΔT (°C)',
-#         title=f'Interface ΔT (25th–75th pct): {DEPTH_MIN:.0f}–{DEPTH_MAX:.0f} m'
-#     )
+    yrs_int, avg_int, err_int = compute_avg_interface_temp_by_year(
+        NC_DIR, DEPTH_MIN, DEPTH_MAX,
+        error_type='sem'
+    )
+    plot_yearly_with_error(
+        yrs_int, avg_int, err_int,
+        ylabel='Mean Interface ΔT (°C)',
+        title=f'Yearly Mean Interface ΔT Width (250–500 m): Standard Error of the Mean'
+    )
 
 def plot_yearly_two_errors(years, means,
                            sems, pct_errs,
@@ -247,45 +245,45 @@ def plot_yearly_two_errors(years, means,
     plt.show()
 
 
-if __name__ == '__main__':
-    # --- Mixed-layer thickness ---
-    # SEM
-    yrs_ml, ml_means, ml_sems = compute_avg_ml_by_year(
-        NC_DIR, DEPTH_MIN, DEPTH_MAX,
-        error_type='sem'
-    )
-    # 25th–75th percentile
-    _,    _,        ml_pct_errs = compute_avg_ml_by_year(
-        NC_DIR, DEPTH_MIN, DEPTH_MAX,
-        error_type='percentile',
-        percentiles=(25,75)
-    )
-    plot_yearly_two_errors(
-        yrs_ml,
-        ml_means,
-        ml_sems,
-        ml_pct_errs,
-        ylabel='Mean Mixed-Layer Thickness (m)',
-        title=f'Mixed-Layer Thickness (250–500 m)'
-    )
+# if __name__ == '__main__':
+#     # --- Mixed-layer thickness ---
+#     # SEM
+#     yrs_ml, ml_means, ml_sems = compute_avg_ml_by_year(
+#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
+#         error_type='sem'
+#     )
+#     # 25th–75th percentile
+#     _,    _,        ml_pct_errs = compute_avg_ml_by_year(
+#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
+#         error_type='percentile',
+#         percentiles=(25,75)
+#     )
+#     plot_yearly_two_errors(
+#         yrs_ml,
+#         ml_means,
+#         ml_sems,
+#         ml_pct_errs,
+#         ylabel='Mean Mixed-Layer Height (m)',
+#         title=f'Yearly Mean Mixed-Layer Height (250–500 m)'
+#     )
 
-    # --- Interface ΔT ---
-    # SEM
-    yrs_int, int_means, int_sems = compute_avg_interface_temp_by_year(
-        NC_DIR, DEPTH_MIN, DEPTH_MAX,
-        error_type='sem'
-    )
-    # 25th–75th percentile
-    _,        _,           int_pct_errs = compute_avg_interface_temp_by_year(
-        NC_DIR, DEPTH_MIN, DEPTH_MAX,
-        error_type='percentile',
-        percentiles=(25,75)
-    )
-    plot_yearly_two_errors(
-        yrs_int,
-        int_means,
-        int_sems,
-        int_pct_errs,
-        ylabel='Mean Interface ΔT (°C)',
-        title=f'Interface ΔT (250–500 m)'
-    )
+#     # --- Interface ΔT ---
+#     # SEM
+#     yrs_int, int_means, int_sems = compute_avg_interface_temp_by_year(
+#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
+#         error_type='sem'
+#     )
+#     # 25th–75th percentile
+#     _,        _,           int_pct_errs = compute_avg_interface_temp_by_year(
+#         NC_DIR, DEPTH_MIN, DEPTH_MAX,
+#         error_type='percentile',
+#         percentiles=(25,75)
+#     )
+#     plot_yearly_two_errors(
+#         yrs_int,
+#         int_means,
+#         int_sems,
+#         int_pct_errs,
+#         ylabel='Mean Interface ΔT (°C)',
+#         title=f'Yearly Mean Interface ΔT Width (250–500 m)'
+#     )

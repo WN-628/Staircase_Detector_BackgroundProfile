@@ -53,15 +53,29 @@ percentages = [
     for y in years_sorted
 ]
 
-# ── Plotting ──────────────────────────────────────────────────
+# Prepare count list
+counts = [profile_counts[y] for y in years_sorted]
+
+# Plot percentage
 plt.figure(figsize=(10, 5))
 plt.scatter(years_sorted, percentages, color='blue')
 plt.plot(years_sorted, percentages, color='gray', linestyle='--', alpha=0.5)
+
+# Annotate each point with the count
+for x, pct, cnt in zip(years_sorted, percentages, counts):
+    plt.text(x, pct + 1.5,      # offset a bit above the dot
+             str(cnt), 
+             ha='center', 
+             va='bottom', 
+             fontsize=9,
+             color='darkred')
+
+# Finish styling
 plt.xticks(years_sorted, rotation=45)
 plt.ylim(0, 105)
 plt.xlabel("Year")
 plt.ylabel("Percentage of Profiles with Mixed Layer (%)")
-plt.title("Percentage of Profiles with ≥1 Mixed Layer per Year")
+plt.title("Percentage of Profiles with ≥1 Mixed Layer per Year\n(Labels show total profiles)")
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
