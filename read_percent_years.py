@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from datetime import datetime
 from collections import defaultdict
+from scipy.stats import linregress
 
 ''' This script reads all netCDF files in a directory and computes the percentage of profiles with at least one mixed layer per year. It then plots this percentage over the years in a scatter plot. '''
 
@@ -70,9 +71,29 @@ for x, pct, cnt in zip(years_sorted, percentages, counts):
              fontsize=9,
              color='darkred')
 
+# fit
+slope, intercept, r_value, p_value, stderr = linregress(years_sorted, percentages)
+ci = 1.96 * stderr
+print(f"Slope: {slope:.4f} %/yr   95% CI: [{slope-ci:.4f}, {slope+ci:.4f}] %/yr")
+print(f'Slope = {slope:.5f} ± {1.96*stderr:.5f} (95% CI)')
+
+# plot
+plt.figure(figsize=(10,5))
+plt.scatter(years_sorted, percentages, color='blue')
+plt.plot(years_sorted, percentages, color='gray', linestyle='--', alpha=0.5)
+
+# annotate counts
+for x, pct, cnt in zip(years_sorted, percentages, counts):
+    plt.text(x, pct + 1.5, str(cnt), ha='center', va='bottom', fontsize=9, color='darkred')
+
+# linear fit line
+x_fit = np.array(years_sorted)
+y_fit = intercept + slope * x_fit
+plt.plot(x_fit, y_fit, 'r--', label='Linear fit')
+
 # Finish styling
 plt.xticks(years_sorted, rotation=45)
-plt.ylim(0, 105)
+plt.ylim(50, 105)
 plt.xlabel("Year")
 plt.ylabel("Percentage of Profiles with Mixed Layer (%)")
 plt.title("Percentage of Profiles with ≥1 Mixed Layer per Year\n(Labels show total profiles)")
