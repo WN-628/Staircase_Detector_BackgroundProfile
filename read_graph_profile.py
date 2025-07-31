@@ -6,8 +6,8 @@ from smooth_temp import *
 from config import FIXED_RESOLUTION_METER
 
 # USER CONFIG ─────────────────────────────────────────
-nc_path   = 'prod_files/itp18cormat.nc'
-target_id = 772  # change to your FloatID
+nc_path   = 'prod_files/itp65cormat.nc'
+target_id = 6  # change to your FloatID
 
 # 1) Open the file and find the profile index
 ds        = Dataset(nc_path, 'r')
@@ -46,8 +46,8 @@ mask_zero = find_step_peaks(temp_anom, min_prominence=gmin, mode='zero')
 
 # 4) Plot profile & detected features
 plt.figure(figsize=(6, 8))
-plt.plot(ct, pressure, '-', label='CT profile', linewidth=1.5)
-plt.plot(ct_bg, pressure, '--', label='Smoothed CT profile', color='black')
+plt.plot(ct, pressure, '-', label='T_raw', linewidth=1.5)
+plt.plot(ct_bg, pressure, '--', label='T_smooth', color='black')
 
 # interface points
 if mask_int.any():
@@ -67,16 +67,16 @@ if mask_ml.any():
 #                 marker='o', s=10, alpha=0.3,
 #                 label='Staircase region', color='red')
 
-plt.scatter(ct[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
+plt.scatter(ct[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Peak in |ΔT|')
     
 # Plot horizontal lines for depth_max_T and depth_min_T
-plt.axhline(depth_max_T, color='green', linestyle='--', label='Depth at max T')
-plt.axhline(depth_min_T, color='blue',  linestyle='--', label='Depth at min T')
+# plt.axhline(depth_max_T, color='green', linestyle='--', label='Depth at max T')
+# plt.axhline(depth_min_T, color='blue',  linestyle='--', label='Depth at min T')
 
 plt.gca().invert_yaxis()
-plt.xlabel('Conservative Temperature (°C)')
-plt.ylabel('Pressure (dbar)')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Depth (m)')
 plt.legend()
-plt.title(f'Float {target_id} CT Profile and Staircase Detection')
+plt.title(f'Float {target_id} T Profile and Staircase Detection')
 plt.tight_layout()
 plt.show()

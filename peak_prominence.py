@@ -92,31 +92,43 @@ def find_step_peaks(ct_anom, min_prominence=0.005, mode='prom'):
 # ax1 = grid.add_subplot(122, sharey=ax0)
 
 # # Left: Original vs Background CT with both peak sets
-# ax0.plot(ct,    pressure,    label='Original CT')
-# ax0.plot(ct_bg, pressure,    label='Background CT')
-# ax0.scatter(ct[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
+# ax0.plot(ct,    pressure,    label='T_raw')
+# ax0.plot(ct_bg, pressure,    label='T_smooth')
+# ax0.scatter(ct[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Peak in |ΔT|')
 # # ax0.scatter(ct[mask_prom], pressure[mask_prom], marker='o', color='red', label='Prom method')
 # ax0.invert_yaxis()
-# ax0.set_xlabel('Conservative Temperature (°C)')
-# ax0.set_ylabel('Pressure (dbar)')
+# # ax0.set_xlabel('Conservative Temperature (°C)')
+# # ax0.set_ylabel('Pressure (dbar)')
 # ax0.set_title('CT vs Background CT')
 # ax0.grid(True)
 # ax0.legend()
 
 # # Right: CT Anomaly with both peak sets
-# ax1.plot(temp_anom, pressure, label='CT Anomaly')
+# ax1.plot(temp_anom, pressure, label='T_Anomaly')
 # ax1.axvline(0, color='gray')
-# ax1.scatter(temp_anom[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Zero method')
+# ax1.scatter(temp_anom[mask_zero], pressure[mask_zero], marker='x', color='blue', label='Peak in |ΔT|')
 # # ax1.scatter(temp_anom[mask_prom], pressure[mask_prom], marker='o', color='red', label='Prom method')
 # for i in np.where(mask_zero)[0]:
 #     ax1.text(temp_anom[i], pressure[i], f'{temp_anom[i]:+.3f}', va='center', fontsize=7, color='blue')
 # # for i in np.where(mask_prom)[0]:
 # #     ax1.text(temp_anom[i], pressure[i], f'{temp_anom[i]:+.3f}', va='bottom', fontsize=7, color='red')
 # # ax1.invert_yaxis()
-# ax1.set_xlabel('CT Anomaly (°C)')
-# ax1.set_title('CT Anomaly with Detected Peaks')
+# # ax1.set_xlabel('CT Anomaly (°C)')
+# # ax1.set_title('CT Anomaly with Detected Peaks')
 # ax1.grid(True)
 # ax1.legend()
 
-# # plt.tight_layout()
-# # plt.show()
+# for ax in (ax0, ax1):
+#     leg = ax.legend(
+#         fontsize=14,       # larger text
+#         markerscale=1.5,   # make the legend markers bigger
+#         handlelength=3,    # length of the legend lines
+#         handletextpad=1.5, # space between marker and text
+#         borderpad=1.2,     # padding around the legend box
+#         frameon=True       # draw a box around the legend
+#     )
+#     # optionally thicken the box edge
+#     leg.get_frame().set_linewidth(1.5)
+
+# plt.tight_layout()
+# plt.show()
