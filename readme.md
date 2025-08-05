@@ -9,20 +9,31 @@ Results (mixed layers, interfaces, connecting layers, masks, background fields) 
 
 ---
 
-## Features
+## General Algorithm Design 
 
-- Load raw CTD profiles (depth, temperature, salinity) from CSV or zipped CSV bundles
-- Interpolate to fixed vertical resolution (configurable in `config.py`)
-- Compute Absolute Salinity and Conservative Temperature via [GSW-Oceanographic toolbox](https://teos-10.github.io/GSW-Python/)
-- Smooth background temperature with Gaussian, boxcar, or adaptive Savitzky–Golay filters
-- Detect CT anomaly peaks using zero-crossing or prominence methods
-- Compute local gradient ratios to refine interface & mixed-layer masks
-- Enforce continuity and prune spurious detections
-- Output NetCDF4 files containing:
-  - Profile metadata (`lat`, `lon`, `dates`, `FloatID`)
-  - Raw & background CT & anomalies
-  - Boolean masks (`mask_ml`, `mask_int`, `mask_sc`, `mask_cl`, …)
-  - Extrema depths (`depth_max_T`, `depth_min_T`)
+1. Load raw ITP profiles (depth, temperature, salinity) from CSV or zipped CSV bundles
+
+2. Ability to interpolate the data to a fixed vertical resolution, configurable in `config.py` (default is not interpolating since we have data already interpolated to 0.25m) 
+
+3. Compute Absolute Salinity and Conservative Temperature via [GSW-Oceanographic toolbox](https://teos-10.github.io/GSW-Python/)
+
+4. Smooth background temperature with Gaussian, boxcar, or adaptive Savitzky–Golay filters
+
+5. Detect CT anomaly peaks using zero-crossing or prominence methods
+
+6. Compute local gradient ratios to refine interface & mixed-layer masks
+
+7. Enforce continuity and prune spurious detections
+
+8. **Output** NetCDF4 files containing:
+
+   - Profile metadata (`lat`, `lon`, `dates`, `FloatID`)
+
+   - Raw & background CT (smoothed by Gaussian distribution) & anomalies
+
+   - Boolean masks (`mask_ml`, `mask_int`, `mask_sc`, `mask_cl`, …)
+
+   - Extrema depths (`depth_max_T`, `depth_min_T`)
 
 ---
 
@@ -92,7 +103,7 @@ Note: We are not doing interpolation by default since we are using data interpol
 
 ------
 
-## Module Breakdown
+## Algorithm Module Breakdown
 
 - **`data_preparation.py`**
    Load and (optionally) interpolate CSV profiles → returns masked NumPy arrays.
@@ -117,7 +128,7 @@ Note: We are not doing interpolation by default since we are using data interpol
    Reads a NetCDF file and plots original CT vs. background-only CT (left) and CT anomaly (right) for a specified profile. 
 - **`read_background_heatmap.py`**
    Reads a NetCDF file and plots the raw CT colored by the raw-to-smoothed gradient ratio heatmap alongside the CT anomaly plot.
-- **`read_graph_profile.py`**
+- **`read_single_profile.py`**
    Reads a NetCDF file, retrieves CT profiles and masks, applies peak prominence detection, and visualizes CT raw, CT smooth, interface and mixed-layer points for a profile specified by float-id. 
 - **`read_histogram.py`**
    Computes and plots histograms of gradient ratios in mixed-layer and interface segments, marks thresholds, and identifies profiles exceeding a threshold. 
@@ -125,11 +136,11 @@ Note: We are not doing interpolation by default since we are using data interpol
    
 - **`read_percent_years.py`**
    Calculates the annual percentage of profiles with at least one mixed layer, fits a linear trend, and plots the time series. 
-- **`read_plot_profiles.py`**
+- **`read_netcdf_profiles.py`**
    Plots multiple CT profiles side-by-side, highlighting mixed-layer and interface markers, labeling each with FloatID. 
 - **`read_thickness_width.py`**
    Computes yearly averages of mixed-layer thickness and interface temperature width (with errors), plots error bars, and fits regressions. 
-- **`read_year_plots.py`**
+- **`read_year_waterfall.py`**
    Generates waterfall plots of CT profiles for a specified year, showing mixed-layer and interface points with annotations. 
 
 ------

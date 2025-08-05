@@ -69,16 +69,7 @@ def create_netcdf(filename, _nlevels_unused=None):
     int_var = fh.createVariable('mask_int',  vlint8, ('Nobs',))
     int_var.long_name = 'Interface mask (1 at interface)'
 
-    cl_var = fh.createVariable('mask_cl',   vlint8, ('Nobs',))
-    cl_var.long_name = 'Connecting-layer mask (1 in connecting layers)'
-
     sc_var = fh.createVariable('mask_sc',   vlint8, ('Nobs',))
     sc_var.long_name = 'Staircase mask (1 in staircase)'
-    
-    cl_mushy_var = fh.createVariable('cl_mushy',     vlint8, ('Nobs',))
-    cl_mushy_var.long_name = 'Mushy-layer indicator'
-
-    cl_supermushy_var = fh.createVariable('cl_supermushy', vlint8, ('Nobs',))
-    cl_supermushy_var.long_name = 'Supermushy-layer indicator'
 
     return fh

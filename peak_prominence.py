@@ -61,6 +61,16 @@ def find_step_peaks(ct_anom, min_prominence=0.005, mode='prom'):
             raise ValueError("mode must be 'zero' or 'prom'")
     return peaks_mask
 
+
+'''
+Example usage of the find_step_peaks function.
+
+Note: If you uncomment this section, when you run main.py, it will execute this example and show the plot which reduce the efficiency of the actual algorithm and produce the plot which is not needed in the execution of the main algorithm.
+
+Therefore, only use this example for testing this module. 
+'''
+
+
 # # === Example usage ===
 # # Load CT profile #1
 # ds = xr.open_dataset('prod_files/itp65cormat.nc')
