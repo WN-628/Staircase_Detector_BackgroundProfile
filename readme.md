@@ -7,6 +7,16 @@ A Python toolkit for detecting double-diffusive “staircase” structures in co
 
 Results (mixed layers, interfaces, connecting layers, masks, background fields) are written into self-describing NetCDF4 files with variable-length (vlen) arrays.
 
+## Folders:
+
+- **Staircase_Detector_Background**:
+  - .py files, `readme.md`
+    - All codes are in the main folder, not in the sub folder
+  - **Relavant_Paper**: storing the paper inspired the code
+  - **gridData_zip**: storing zipped .csv files which are the original data to be executed by the code (**Input Data**)
+  - **prod_files**: the generated .nc (netcdf) files would be produced in this folder (**Produced Results**)
+    - Note: Each produced .nc file would have the same name as the corresponding imported .zip file
+
 ---
 
 ## General Algorithm Design 
@@ -35,11 +45,48 @@ Results (mixed layers, interfaces, connecting layers, masks, background fields) 
 
    - Extrema depths (`depth_max_T`, `depth_min_T`)
 
+## Algorithm Design 
+
+1. **Loading Data \& Create netcdf files**: 
+
+   - Used code: `data_preparation.py`, `create_netcdf.py`, `config.py`(possible) 
+
+   1. Load raw ITP profiles (depth, temperature, salinity) from CSV or zipped CSV bundles
+   2. Ability to interpolate the data to a fixed vertical resolution, configurable in `config.py` (default is not interpolating since we have data already interpolated to 0.25m) 
+   3. Compute Absolute Salinity and Conservative Temperature via [GSW-Oceanographic toolbox](https://teos-10.github.io/GSW-Python/)
+
+2. **Peak detection**
+
+   - Used code: `sc_detector_peaks` which calls `peak_prominance.py` & `smooth_temp.py`
+
+   1. We smooth the data by depth:
+      - $$0-300m$$: `smooth_background_asg`  (adaptive SG)
+      - $$300m - deeper$$: `smooth_background_fixed` (moving mean)
+   2. Detect CT anomaly peaks using zero-crossing or prominence methods
+      - Note: we are using zero-crossing method for now, can be changed to prominence method if the user desire 
+   3. A segment between 2 peaks from negative residual to positive is labeled as `mask_int`, from positive residual to negative is labeled as `mask_ml`
+
+3. **Gradient ratio filtering**
+
+   - Used code: `sc_detector_grad.py` which calls `smooth_temp.py`
+
+   1. We smooth data again by Gaussian distribution to get the background temperature profile
+   2. Compute ∂CT/∂z for raw and background temperature for each labelled segments, `mask_ml` \& `mask_int` from step 2
+   3. Store segments as interface if $$M = \left(\frac{\partial ct}{\partial z}\right)_\text{raw} \large/ \left(\frac{\partial ct}{\partial z}\right)_\text{background}$$ > `thr_iface`=1.8, mixed layer if $$M$$< `thr_ml`=0.6.
+      - Note: labelled segments from step 2 which do not satisfy the gradient threshold are unlabelled in this step, meaning we are not labelling new segments 
+   4. Enforce minimum run lengths (at least 3) for each staircase structure, store them in `mask_sc`= `mask_ml` + `mask_int` 
+
+4. **Mask assembly & output**
+
+   - Store masks into final staircase mask.
+   - Record metadata and extrema depths.
+   - Export to NetCDF4.
+
 ---
 
-## Requirements
+## Library Requirements
 
-- Python ≥ 3.8
+- Python ≥ 3.8: testing environment is python 3.13.5
 - [NumPy](https://numpy.org/)
 - [SciPy](https://scipy.org/)
 - [pandas](https://pandas.pydata.org/)
@@ -47,10 +94,11 @@ Results (mixed layers, interfaces, connecting layers, masks, background fields) 
 - [netCDF4](https://unidata.github.io/netcdf4-python/)
 - [GSW-Oceanographic-Toolbox (GSW)](https://teos-10.github.io/GSW-Python/)
 
-Install via:
+Install via (pip can also work):
 
 ```bash
-pip install numpy scipy pandas xarray netCDF4 gsw
+conda install numpy scipy pandas xarray netCDF4 
+conda install -c conda-forge gsw
 ```
 
 ## Configuration
@@ -61,7 +109,7 @@ Edit `config.py`:
 # Vertical resolution in meters for interpolation
 FIXED_RESOLUTION_METER = 0.25
 ```
-Note: We are not doing interpolation by default since we are using data interpolated by Jiaming Chang.
+Note: We are not doing interpolation by default since we are using data already interpolated by Jiaming Chang.
 
 ------
 
@@ -69,7 +117,7 @@ Note: We are not doing interpolation by default since we are using data interpol
 
 1. **Prepare your data**
 
-   - Place one or more `.zip` archives under `gridData_zip/`.
+   - Place one or more `.zip` archives under `gridData_zip`.
    - Each archive should contain one or more CTD CSV files with columns:
      - `depth` (or first column)
      - `temperature` (or second column)
@@ -142,27 +190,6 @@ Note: We are not doing interpolation by default since we are using data interpol
    Computes yearly averages of mixed-layer thickness and interface temperature width (with errors), plots error bars, and fits regressions. 
 - **`read_year_waterfall.py`**
    Generates waterfall plots of CT profiles for a specified year, showing mixed-layer and interface points with annotations. 
-
-------
-
-## Algorithm Details
-
-1. **Background smoothing**
-   - For peak detection: 
-     - $$0-300m$$: `smooth_background_asg`  (adaptive SG)
-     - $$300m - deeper$$: `smooth_background_fixed` (moving mean)
-   - For Gradient ratio filtering: `smooth_background_gaussian` 
-2. **Peak detection**
-   - Split CT anomaly at zero-crossings.
-   - Select most prominent peak/trough above `min_prominence` per segment.
-3. **Gradient ratio filtering**
-   - Compute ∂CT/∂z (raw vs. background).
-   - Label points as interface if ratio > `thr_iface`=1.8, mixed layer if < `thr_ml`=0.6.
-   - Enforce minimum run lengths (at least 3) and continuity.
-4. **Mask assembly & output**
-   - Combine masks into final staircase mask.
-   - Record metadata and extrema depths.
-   - Export to NetCDF4.
 
 ------
 
