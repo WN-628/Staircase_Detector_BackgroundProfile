@@ -5,6 +5,18 @@ from peak_prominence import find_step_peaks
 from smooth_temp import *
 from config import FIXED_RESOLUTION_METER
 
+'''
+This script reads a NetCDF file containing CTD profiles, smooths the temperature data,
+and detects staircase features using peak prominence. It visualizes the results for a specified float ID.
+Expects:
+    - NetCDF file with CTD data
+    - FloatID to analyze
+    - Configuration settings (e.g., depth ranges)
+    - Smoothing parameters (e.g., window size)
+    - Peak detection parameters (e.g., prominence)
+    - Staircase detection parameters (e.g., step size)
+'''
+
 # USER CONFIG ─────────────────────────────────────────
 nc_path   = 'prod_files/itp65cormat.nc'
 target_id = 6  # change to your FloatID

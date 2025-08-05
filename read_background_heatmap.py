@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
 '''
-This file reads a NetCDF file containing temperature profiles and plots the original temperature profile, background-only CT, and CT anomaly for a specified profile. The heatmap shows the ratio of the raw temperature gradient to the smoothed gradient, with a color scale from 0 to 2.
+This file reads a NetCDF file containing temperature profiles and plots the original temperature profile, background-only CT, and CT anomaly for a specified profile. The heatmap shows the ratio of the raw temperature gradient to the smoothed gradient, with a color scale from 0 to 2 (edittable).
 '''
 
 # Read the NetCDF file

@@ -53,12 +53,6 @@ def load_data_csv_zip(path, profiles, interp=True, resolution=FIXED_RESOLUTION_M
             print(f"❌ Failed to read {fname}: {e}")
             continue
         
-        # if pressure.size == 0 or pressure.max() <= depth_thres:
-        #     count += 1
-        #     SKIPPED_DEPTH_FILES.append(fname)
-        #     # print(f"⛔ Skipping {fname}: invalid pressure range")
-        #     continue
-        
         try:
             if interp:
                 min_p = pressure.min()

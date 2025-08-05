@@ -3,6 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+'''
+This script reads temperature profiles from a NetCDF file, plots them with mixed-layer and interface highlights,
+and labels each profile with its FloatID.
+'''
+
 # ── USER CONFIG ─────────────────────────────────────────
 nc_path = 'prod_files/itp65cormat.nc'  # path to your NetCDF file
 # ────────────────────────────────────────────────────────

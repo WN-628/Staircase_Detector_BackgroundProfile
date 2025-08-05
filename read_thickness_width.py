@@ -6,6 +6,15 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
+'''
+This script computes yearly averages of mixed-layer thickness and interface temperature differences
+from NetCDF files, and plots the results with error bars and linear regression fits.
+It expects the following functions to be defined:
+- compute_avg_ml_by_year: computes average mixed-layer thickness by year
+- compute_avg_interface_temp_by_year: computes average interface temperature difference by year
+- plot_yearly_with_error_and_fit: plots yearly averages with error bars and fits
+'''
+
 # ── USER SETTINGS ──────────────────────────────────────────────────────────
 NC_DIR      = 'prod_files'   # directory with your .nc files
 DEPTH_MIN   = 250.0          # lower bound of the depth window [m or dbar]

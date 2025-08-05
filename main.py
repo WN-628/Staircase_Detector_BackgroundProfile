@@ -16,6 +16,9 @@ Script to process CTD data: smooth temperature profiles and save to NetCDF.
 Expects:
     - INPUT_DIR: directory with .zip files of CTD CSVs
     - OUTPUT_DIR: empty or new directory for .nc outputs
+
+References:
+    - Sommer, T. et al. (2013). "Revisiting Sensor Responses with Implications for Double-Diffusive Fluxes." See Relevant_paper/Sommer_et_al.pdf for full text, especially Appendix A for Interface Detection Algorithm.
 '''
 
 # --- Configuration: input and output folders ---
@@ -63,7 +66,7 @@ for src_zip in zip_files:
             if f.endswith('.csv') and not f.startswith('._'):
                 profiles.append(os.path.join(root, f))
 
-    # Load raw profiles (no interpolation)
+    # Load raw profiles (no re-interpolation)
     prof_no, p_raw, lat, lon, ct_raw, sa_raw, dates = load_data_csv_zip(
         '', profiles,
         interp=False,

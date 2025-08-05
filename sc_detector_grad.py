@@ -4,6 +4,16 @@ from config import FIXED_RESOLUTION_METER
 
 '''
 Detect staircase gradients in CTD profiles using a gradient ratio method.
+
+Note:
+We are only using the 'filter_staircase_masks_local' function from this module.
+This function processes the CTD data to filter staircase masks based on local gradients.
+
+The function 'filter_staircase_masks_local' has a similar structure to the function 'detect_staircase_gradient_ratio',
+but it is designed to filter the staircase masks after they have been labelled.
+
+References for the algorithm idea:
+    - Sommer, T. et al. (2013). "Revisiting Sensor Responses with Implications for Double-Diffusive Fluxes." See Relevant_paper/Sommer_et_al.pdf for full text, especially Appendix A for Interface Detection Algorithm.
 '''
 
 def continuity(arr, num_one, num_three):

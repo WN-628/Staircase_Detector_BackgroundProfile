@@ -7,7 +7,12 @@ from scipy.ndimage import gaussian_filter1d
 
 '''
 smoothing_temp.py
-Apply a running-mean smoother to CTD temperature data (background profile) and optionally flag small-scale anomalies.
+Functions to smooth temperature profiles and compute anomalies.
+Includes:
+- smooth_background_fixed: moving-mean average smoothing
+- smooth_background_asg: adaptive Savitzky–Golay smoothing
+- smooth_background_by_depth: choose smoothing based on profile depth
+- smooth_background_gaussian: Gaussian smoothing
 '''
 
 def smooth_background_fixed(ct, dz, Theta=8.0, theta=0.04):
